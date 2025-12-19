@@ -1015,7 +1015,7 @@
         
         // Versão do mapeamento de domínios - incrementar quando adicionar novos domínios
         // v7: Garantir limpeza completa do cache ao atualizar
-        const DOMAINS_VERSION = 10;
+        const DOMAINS_VERSION = 11;
         const STORAGE_KEY_VERSION = 'dashboard_domains_version';
         
         // Função para verificar se precisa atualizar domínios
@@ -2097,8 +2097,22 @@
         let searchTerm = '';
 
         // ===========================================
-        // SISTEMA DE SCREENSHOT COM MÚLTIPLOS FALLBACKS
+        // SISTEMA DE SCREENSHOT COM MÚLTIPLOS FALLBACKS E RATE LIMITING
         // ===========================================
+        
+        // Configurações de rate limiting para evitar sobrecarga
+        const SCREENSHOT_CONFIG = {
+            maxConcurrent: 4,        // Máximo de requisições simultâneas
+            delayBetweenBatches: 500, // Delay entre lotes (ms)
+            retryDelay: 2000,        // Delay antes de tentar fallback
+            lazyLoadEnabled: true,   // Ativa lazy loading
+            lazyLoadThreshold: 200   // Pixels antes de carregar
+        };
+        
+        // Fila de screenshots para processar
+        let screenshotQueue = [];
+        let activeScreenshots = 0;
+        let screenshotStats = { loaded: 0, failed: 0, total: 0 };
         
         // Lista de serviços de screenshot (em ordem de preferência)
         const SCREENSHOT_SERVICES = [
@@ -2148,6 +2162,89 @@
             if (!url) return '';
             const finalUrl = url.startsWith('http') ? url : `https://${url}`;
             return SCREENSHOT_SERVICES[1](finalUrl, 600, 400);
+        }
+        
+        // Sistema de processamento de fila com rate limiting
+        async function processScreenshotQueue() {
+            if (screenshotQueue.length === 0 || activeScreenshots >= SCREENSHOT_CONFIG.maxConcurrent) {
+                return;
+            }
+            
+            const batch = screenshotQueue.splice(0, SCREENSHOT_CONFIG.maxConcurrent - activeScreenshots);
+            
+            for (const item of batch) {
+                activeScreenshots++;
+                
+                // Carrega a imagem diretamente (não usar loadScreenshotWithFallback ainda)
+                const img = item.img;
+                const url = item.url;
+                const finalUrl = url.startsWith('http') ? url : `https://${url}`;
+                const isSmallPreview = img.closest('.list-preview');
+                const width = isSmallPreview ? 600 : 1200;
+                const height = isSmallPreview ? 400 : 800;
+                
+                // Define o src para iniciar carregamento
+                img.src = SCREENSHOT_SERVICES[0](finalUrl, width, height);
+                
+                // Adiciona delay para próximo item
+                await new Promise(resolve => setTimeout(resolve, 150));
+                
+                activeScreenshots--;
+                
+                // Processa próximo lote se houver
+                if (screenshotQueue.length > 0) {
+                    processScreenshotQueue();
+                }
+            }
+        }
+        
+        // Carrega screenshot com fallback automático
+        async function loadScreenshotWithFallback(img, url) {
+            let attempts = 0;
+            const maxAttempts = SCREENSHOT_SERVICES.length;
+            
+            while (attempts < maxAttempts) {
+                try {
+                    const screenshotUrl = getScreenshotUrl(url, attempts);
+                    
+                    // Cria uma promise para aguardar o carregamento
+                    await new Promise((resolve, reject) => {
+                        const tempImg = new Image();
+                        
+                        tempImg.onload = () => {
+                            img.src = screenshotUrl;
+                            screenshotStats.loaded++;
+                            console.log(`✅ Screenshot carregado (${screenshotStats.loaded}/${screenshotStats.total}): ${url}`);
+                            resolve();
+                        };
+                        
+                        tempImg.onerror = () => {
+                            reject(new Error('Failed to load'));
+                        };
+                        
+                        // Define timeout
+                        setTimeout(() => reject(new Error('Timeout')), 10000);
+                        
+                        tempImg.src = screenshotUrl;
+                    });
+                    
+                    // Sucesso - sai do loop
+                    return;
+                    
+                } catch (error) {
+                    attempts++;
+                    console.log(`⚠️ Tentativa ${attempts} falhou para: ${url}`);
+                    
+                    if (attempts < maxAttempts) {
+                        // Aguarda antes de tentar próximo serviço
+                        await new Promise(resolve => setTimeout(resolve, SCREENSHOT_CONFIG.retryDelay));
+                    } else {
+                        // Todas as tentativas falharam
+                        screenshotStats.failed++;
+                        console.error(`❌ Falha ao carregar screenshot (${screenshotStats.failed}): ${url}`);
+                    }
+                }
+            }
         }
 
         // Função para validar se a URL é válida para screenshot
@@ -2203,7 +2300,7 @@
         }
 
         // Função para lidar com erro de carregamento de imagem
-        // Tenta múltiplos serviços de screenshot até um funcionar
+        // Agora usa o sistema de fila com rate limiting
         function handleImageError(img) {
             const url = img.dataset.url;
             
@@ -2216,16 +2313,19 @@
             
             let fallbackIndex = parseInt(img.dataset.fallbackIndex || '0') + 1;
             
-            console.log(`⚠️ Erro ao carregar preview. Tentando serviço ${fallbackIndex + 1}/${SCREENSHOT_SERVICES.length}...`);
-            
             if (fallbackIndex < SCREENSHOT_SERVICES.length) {
-                // Tenta o próximo serviço
+                // Tenta o próximo serviço (sem adicionar à fila, carrega diretamente)
+                console.log(`⚠️ Erro ao carregar. Tentando serviço ${fallbackIndex + 1}/${SCREENSHOT_SERVICES.length}...`);
                 img.dataset.fallbackIndex = fallbackIndex;
                 const finalUrl = url.startsWith('http') ? url : `https://${url}`;
                 const isSmallPreview = img.closest('.list-preview');
                 const width = isSmallPreview ? 600 : 1200;
                 const height = isSmallPreview ? 400 : 800;
-                img.src = SCREENSHOT_SERVICES[fallbackIndex](finalUrl, width, height);
+                
+                // Adiciona delay para não sobrecarregar
+                setTimeout(() => {
+                    img.src = SCREENSHOT_SERVICES[fallbackIndex](finalUrl, width, height);
+                }, 300);
             } else {
                 // Todos os serviços falharam
                 showPreviewFallback(img, url);
@@ -2556,9 +2656,10 @@
                                         <button class="refresh-preview-btn" onclick="refreshPreview(this, '${screenshotTargetUrl}')" title="Atualizar preview">
                                             <i class="fas fa-sync-alt"></i>
                                         </button>
-                                        <img src="${getScreenshotUrl(screenshotTargetUrl)}" 
+                                        <img data-src="${getScreenshotUrl(screenshotTargetUrl)}" 
                                              alt="${project.name}" 
                                              loading="lazy"
+                                             class="lazy-screenshot"
                                              data-url="${screenshotTargetUrl}"
                                              data-fallback-index="0"
                                              onload="handleImageLoad(this)"
@@ -2651,6 +2752,69 @@
             document.getElementById('totalProjects').textContent = totalProjects;
             document.getElementById('productionCount').textContent = productionCount;
             document.getElementById('noResults').style.display = anyProjectsShown ? 'none' : 'block';
+            
+            // Ativa lazy loading com Intersection Observer
+            initLazyLoading();
+        }
+        
+        // Intersection Observer para lazy loading progressivo
+        let imageObserver = null;
+        
+        function initLazyLoading() {
+            // Remove observer anterior se existir
+            if (imageObserver) {
+                imageObserver.disconnect();
+            }
+            
+            // Reseta estatísticas
+            screenshotStats = { loaded: 0, failed: 0, total: 0 };
+            screenshotQueue = [];
+            activeScreenshots = 0;
+            
+            // Configuração do Intersection Observer
+            const observerConfig = {
+                root: null,
+                rootMargin: `${SCREENSHOT_CONFIG.lazyLoadThreshold}px`,
+                threshold: 0.01
+            };
+            
+            imageObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        const dataSrc = img.getAttribute('data-src');
+                        
+                        if (dataSrc && !img.src) {
+                            // Adiciona à fila em vez de carregar imediatamente
+                            screenshotQueue.push({ img, url: img.dataset.url });
+                            screenshotStats.total++;
+                            
+                            // Remove o data-src para não processar novamente
+                            img.removeAttribute('data-src');
+                            
+                            // Inicia processamento da fila
+                            processScreenshotQueue();
+                        }
+                        
+                        // Para de observar esta imagem
+                        observer.unobserve(img);
+                    }
+                });
+            }, observerConfig);
+            
+            // Observa todas as imagens lazy
+            const lazyImages = document.querySelectorAll('img.lazy-screenshot[data-src]');
+            console.log(`🖼️ Lazy loading habilitado para ${lazyImages.length} imagens`);
+            
+            lazyImages.forEach(img => {
+                imageObserver.observe(img);
+            });
+            
+            // Se não há lazy loading, mostra estatísticas
+            if (lazyImages.length === 0) {
+                const allImages = document.querySelectorAll('.project-preview img, .list-preview img');
+                console.log(`📊 Total de previews: ${allImages.length}`);
+            }
         }
 
         function setView(view) {
