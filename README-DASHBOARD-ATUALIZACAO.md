@@ -31,7 +31,7 @@ const CUSTOM_DOMAINS = {
 };
 ```
 
-**Copie e cole** este código no arquivo `projects-dashboard.html`, substituindo o objeto `CUSTOM_DOMAINS` existente.
+**Copie e cole** este código no arquivo `index.html`, substituindo o objeto `CUSTOM_DOMAINS` existente.
 
 ### 3️⃣ Como o Sistema Funciona
 
@@ -154,7 +154,7 @@ O botão **"Atualizar Previews"** no dashboard:
 
 ### 8️⃣ Arquivos Importantes
 
-- `projects-dashboard.html` - Dashboard principal
+- `index.html` - Dashboard principal
 - `verify_github_pages.py` - Script de verificação de URLs
 - `github_pages_verification.json` - Resultados da última verificação
 - `fetch_github_pages_urls.py` - Script alternativo via API do GitHub

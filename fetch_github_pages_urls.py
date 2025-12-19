@@ -210,7 +210,7 @@ def main():
     print("="*70)
     print("\n💡 Próximos passos:")
     print("1. Copie o objeto CUSTOM_DOMAINS acima")
-    print("2. Cole no arquivo projects-dashboard.html")
+    print("2. Cole no arquivo index.html")
     print("3. Atualize as URLs dos projetos com as URLs corretas")
     print("4. Verifique o arquivo 'github_pages_scan.json' para detalhes\n")
 

@@ -24,7 +24,7 @@ Este dashboard permite visualizar todos os seus projetos em um único lugar, com
 
 ### Passo 2: Configure no Dashboard
 
-Edite o arquivo `projects-dashboard.html` e localize o objeto `CUSTOM_DOMAINS`:
+Edite o arquivo `index.html` e localize o objeto `CUSTOM_DOMAINS`:
 
 ```javascript
 const CUSTOM_DOMAINS = {
@@ -92,7 +92,7 @@ Cada projeto no dashboard deve ter:
 
 ### Adicionar Novo Projeto
 
-1. Localize o array `projectsData` no arquivo `projects-dashboard.html`
+1. Localize o array `projectsData` no arquivo `index.html`
 2. Adicione um novo objeto dentro do cliente apropriado:
 
 ```javascript

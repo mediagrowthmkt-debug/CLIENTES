@@ -44,7 +44,7 @@ cd /Users/bruno/Documents/LPS/CLIENTES
 python3 -m http.server 8080
 ```
 
-Abra no navegador: `http://localhost:8080/projects-dashboard.html`
+Abra no navegador: `http://localhost:8080/index.html`
 
 ### 3️⃣ Sincronizar com GitHub
 
@@ -197,7 +197,7 @@ python3 dashboard_api.py
 
 ```
 CLIENTES/
-├── projects-dashboard.html      # Dashboard principal (com botão sync)
+├── index.html                   # Dashboard principal (com botão sync)
 ├── dashboard_api.py             # API Flask para sincronização
 ├── verify_github_pages.py       # Script standalone (backup)
 ├── github_pages_verification.json  # Última verificação

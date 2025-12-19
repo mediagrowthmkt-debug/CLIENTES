@@ -131,7 +131,7 @@ def main():
         
         # Gerar código JavaScript
         print("\n🔧 CÓDIGO JAVASCRIPT PARA ATUALIZAR:\n")
-        print("// Adicione estas URLs no projects-dashboard.html:\n")
+        print("// Adicione estas URLs no index.html:\n")
         
         for result in results:
             if result["accessible"]:

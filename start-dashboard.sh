@@ -103,7 +103,7 @@ echo "======================================================================"
 echo -e "${GREEN}✨ SISTEMA INICIADO COM SUCESSO!${NC}"
 echo "======================================================================"
 echo ""
-echo -e "${BLUE}📊 Dashboard:${NC}  http://localhost:8080/projects-dashboard.html"
+echo -e "${BLUE}📊 Dashboard:${NC}  http://localhost:8080/index.html"
 echo -e "${BLUE}🔧 API:${NC}        http://localhost:5000"
 echo ""
 echo -e "${YELLOW}💡 Dicas:${NC}"
@@ -124,10 +124,10 @@ echo ""
 sleep 2
 if command -v open &> /dev/null; then
     # macOS
-    open "http://localhost:8080/projects-dashboard.html"
+    open "http://localhost:8080/index.html"
 elif command -v xdg-open &> /dev/null; then
     # Linux
-    xdg-open "http://localhost:8080/projects-dashboard.html"
+    xdg-open "http://localhost:8080/index.html"
 fi
 
 # Manter script rodando
