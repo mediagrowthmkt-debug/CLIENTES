@@ -1012,11 +1012,122 @@
         // Chave para salvar no localStorage
         const STORAGE_KEY_DOMAINS = 'dashboard_custom_domains';
         const STORAGE_KEY_PROJECTS = 'dashboard_projects_data';
+        const STORAGE_KEY_SCREENSHOTS = 'dashboard_screenshots_cache';
         
         // Versão do mapeamento de domínios - incrementar quando adicionar novos domínios
         // v7: Garantir limpeza completa do cache ao atualizar
-        const DOMAINS_VERSION = 11;
+        const DOMAINS_VERSION = 12;
         const STORAGE_KEY_VERSION = 'dashboard_domains_version';
+        
+        // Configuração de cache de screenshots
+        const SCREENSHOT_CACHE_CONFIG = {
+            enabled: true,
+            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 dias em ms
+            maxSize: 5 * 1024 * 1024, // 5MB (localStorage tem limite ~10MB)
+        };
+        
+        // Cache de screenshots em memória
+        let screenshotCache = {};
+        
+        // Função para carregar cache de screenshots
+        function loadScreenshotCache() {
+            try {
+                const cached = localStorage.getItem(STORAGE_KEY_SCREENSHOTS);
+                if (cached) {
+                    screenshotCache = JSON.parse(cached);
+                    
+                    // Remove screenshots expirados
+                    const now = Date.now();
+                    let removed = 0;
+                    Object.keys(screenshotCache).forEach(url => {
+                        if (now - screenshotCache[url].timestamp > SCREENSHOT_CACHE_CONFIG.maxAge) {
+                            delete screenshotCache[url];
+                            removed++;
+                        }
+                    });
+                    
+                    if (removed > 0) {
+                        console.log(`🧹 ${removed} screenshots expirados removidos do cache`);
+                        saveScreenshotCache();
+                    }
+                    
+                    console.log(`📸 ${Object.keys(screenshotCache).length} screenshots carregados do cache`);
+                }
+            } catch (e) {
+                console.warn('⚠️ Erro ao carregar cache de screenshots:', e);
+                screenshotCache = {};
+            }
+        }
+        
+        // Função para salvar cache de screenshots
+        function saveScreenshotCache() {
+            if (!SCREENSHOT_CACHE_CONFIG.enabled) return;
+            
+            try {
+                const data = JSON.stringify(screenshotCache);
+                
+                // Verifica tamanho antes de salvar
+                if (data.length > SCREENSHOT_CACHE_CONFIG.maxSize) {
+                    console.warn('⚠️ Cache de screenshots muito grande, removendo entradas antigas...');
+                    
+                    // Remove 30% das entradas mais antigas
+                    const entries = Object.entries(screenshotCache)
+                        .sort((a, b) => a[1].timestamp - b[1].timestamp);
+                    
+                    const toRemove = Math.floor(entries.length * 0.3);
+                    for (let i = 0; i < toRemove; i++) {
+                        delete screenshotCache[entries[i][0]];
+                    }
+                }
+                
+                localStorage.setItem(STORAGE_KEY_SCREENSHOTS, JSON.stringify(screenshotCache));
+                console.log(`💾 Cache de screenshots salvo: ${Object.keys(screenshotCache).length} URLs`);
+            } catch (e) {
+                console.warn('⚠️ Erro ao salvar cache de screenshots:', e);
+                
+                // Se falhou por limite de espaço, limpa metade do cache
+                if (e.name === 'QuotaExceededError') {
+                    const entries = Object.entries(screenshotCache);
+                    const half = Math.floor(entries.length / 2);
+                    screenshotCache = Object.fromEntries(entries.slice(half));
+                    
+                    try {
+                        localStorage.setItem(STORAGE_KEY_SCREENSHOTS, JSON.stringify(screenshotCache));
+                    } catch (e2) {
+                        console.error('❌ Não foi possível salvar cache mesmo após limpeza');
+                    }
+                }
+            }
+        }
+        
+        // Função para obter screenshot do cache
+        function getScreenshotFromCache(url) {
+            if (!SCREENSHOT_CACHE_CONFIG.enabled) return null;
+            
+            const cached = screenshotCache[url];
+            if (cached && Date.now() - cached.timestamp < SCREENSHOT_CACHE_CONFIG.maxAge) {
+                return cached.src;
+            }
+            return null;
+        }
+        
+        // Função para adicionar screenshot ao cache
+        function addScreenshotToCache(url, src) {
+            if (!SCREENSHOT_CACHE_CONFIG.enabled) return;
+            
+            screenshotCache[url] = {
+                src: src,
+                timestamp: Date.now()
+            };
+            
+            // Salva a cada 5 novos screenshots para não sobrecarregar
+            if (Object.keys(screenshotCache).length % 5 === 0) {
+                saveScreenshotCache();
+            }
+        }
+        
+        // Carrega cache ao iniciar
+        loadScreenshotCache();
         
         // Função para verificar se precisa atualizar domínios
         function needsDomainsUpdate() {
@@ -2175,7 +2286,7 @@
             for (const item of batch) {
                 activeScreenshots++;
                 
-                // Carrega a imagem diretamente (não usar loadScreenshotWithFallback ainda)
+                // Carrega a imagem
                 const img = item.img;
                 const url = item.url;
                 const finalUrl = url.startsWith('http') ? url : `https://${url}`;
@@ -2183,8 +2294,16 @@
                 const width = isSmallPreview ? 600 : 1200;
                 const height = isSmallPreview ? 400 : 800;
                 
+                const screenshotUrl = SCREENSHOT_SERVICES[0](finalUrl, width, height);
+                
                 // Define o src para iniciar carregamento
-                img.src = SCREENSHOT_SERVICES[0](finalUrl, width, height);
+                img.src = screenshotUrl;
+                
+                // Cria um listener para salvar no cache quando carregar com sucesso
+                img.addEventListener('load', function onLoadSuccess() {
+                    addScreenshotToCache(url, screenshotUrl);
+                    img.removeEventListener('load', onLoadSuccess);
+                }, { once: true });
                 
                 // Adiciona delay para próximo item
                 await new Promise(resolve => setTimeout(resolve, 150));
@@ -2322,9 +2441,18 @@
                 const width = isSmallPreview ? 600 : 1200;
                 const height = isSmallPreview ? 400 : 800;
                 
+                const fallbackSrc = SCREENSHOT_SERVICES[fallbackIndex](finalUrl, width, height);
+                
+                // Adiciona listener para salvar no cache se funcionar
+                const onSuccess = () => {
+                    addScreenshotToCache(url, fallbackSrc);
+                    img.removeEventListener('load', onSuccess);
+                };
+                img.addEventListener('load', onSuccess, { once: true });
+                
                 // Adiciona delay para não sobrecarregar
                 setTimeout(() => {
-                    img.src = SCREENSHOT_SERVICES[fallbackIndex](finalUrl, width, height);
+                    img.src = fallbackSrc;
                 }, 300);
             } else {
                 // Todos os serviços falharam
@@ -2783,17 +2911,30 @@
                     if (entry.isIntersecting) {
                         const img = entry.target;
                         const dataSrc = img.getAttribute('data-src');
+                        const url = img.dataset.url;
                         
-                        if (dataSrc && !img.src) {
-                            // Adiciona à fila em vez de carregar imediatamente
-                            screenshotQueue.push({ img, url: img.dataset.url });
-                            screenshotStats.total++;
+                        if (dataSrc && !img.src && url) {
+                            // Verifica se existe no cache primeiro
+                            const cachedSrc = getScreenshotFromCache(url);
                             
-                            // Remove o data-src para não processar novamente
-                            img.removeAttribute('data-src');
-                            
-                            // Inicia processamento da fila
-                            processScreenshotQueue();
+                            if (cachedSrc) {
+                                // Usa screenshot do cache
+                                console.log(`💾 Screenshot do cache: ${url}`);
+                                img.src = cachedSrc;
+                                img.removeAttribute('data-src');
+                                screenshotStats.loaded++;
+                                screenshotStats.total++;
+                            } else {
+                                // Adiciona à fila para carregar
+                                screenshotQueue.push({ img, url: url });
+                                screenshotStats.total++;
+                                
+                                // Remove o data-src para não processar novamente
+                                img.removeAttribute('data-src');
+                                
+                                // Inicia processamento da fila
+                                processScreenshotQueue();
+                            }
                         }
                         
                         // Para de observar esta imagem
@@ -3852,6 +3993,18 @@
         document.getElementById('previewModal').addEventListener('click', (e) => {
             if (e.target.id === 'previewModal') closeModal();
         });
+        
+        // Salva cache de screenshots antes de fechar a página
+        window.addEventListener('beforeunload', () => {
+            saveScreenshotCache();
+        });
+        
+        // Salva cache periodicamente a cada 30 segundos
+        setInterval(() => {
+            if (Object.keys(screenshotCache).length > 0) {
+                saveScreenshotCache();
+            }
+        }, 30000);
 
         // Update date
         document.getElementById('updateDate').textContent = new Date().toLocaleDateString('pt-BR', {
