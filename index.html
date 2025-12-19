@@ -1016,7 +1016,7 @@
         
         // Versão do mapeamento de domínios - incrementar quando adicionar novos domínios
         // v7: Garantir limpeza completa do cache ao atualizar
-        const DOMAINS_VERSION = 12;
+        const DOMAINS_VERSION = 13;
         const STORAGE_KEY_VERSION = 'dashboard_domains_version';
         
         // Configuração de cache de screenshots
@@ -2541,7 +2541,13 @@
             
             // Ativa animação do botão
             btn.classList.add('refreshing');
-            showToast('🔍 Verificando e validando URL...', 'info');
+            showToast('� Atualizando preview...', 'info');
+            
+            // REMOVE DO CACHE para forçar recarregamento
+            if (screenshotCache[url]) {
+                delete screenshotCache[url];
+                console.log(`🗑️ Cache removido para: ${url}`);
+            }
             
             try {
                 // VALIDA E CORRIGE A URL AUTOMATICAMENTE
@@ -2574,16 +2580,19 @@
                 img.dataset.fallbackIndex = '0';
                 img.dataset.url = finalUrl;
                 
-                // Gera nova URL com cache-buster
+                // Gera nova URL com cache-buster para forçar novo screenshot
                 const timestamp = Date.now();
-                const newSrc = SCREENSHOT_SERVICES[0](finalUrl, 1200, 800) + '&t=' + timestamp;
+                const screenshotUrl = SCREENSHOT_SERVICES[0](finalUrl, 1200, 800) + '&t=' + timestamp;
                 
                 // Carrega nova imagem
                 const tempImg = new Image();
                 tempImg.onload = function() {
-                    img.src = newSrc;
+                    img.src = screenshotUrl;
+                    // Adiciona ao cache (sem o timestamp)
+                    const cleanUrl = SCREENSHOT_SERVICES[0](finalUrl, 1200, 800);
+                    addScreenshotToCache(finalUrl, cleanUrl);
                     btn.classList.remove('refreshing');
-                    showToast('✅ Preview atualizado!', 'success');
+                    showToast('✅ Preview atualizado e salvo!', 'success');
                 };
                 tempImg.onerror = function() {
                     // Tenta próximo serviço
@@ -2592,7 +2601,7 @@
                     img.src = newSrc2;
                     btn.classList.remove('refreshing');
                 };
-                tempImg.src = newSrc;
+                tempImg.src = screenshotUrl;
                 
             } catch (error) {
                 console.error('Erro ao validar URL:', error);
@@ -2988,6 +2997,14 @@
             btn.classList.add('refreshing');
             btn.disabled = true;
             
+            showToast('🧹 Limpando cache de previews...', 'info');
+            
+            // LIMPA TODO O CACHE DE SCREENSHOTS para forçar recarregamento
+            const cacheCount = Object.keys(screenshotCache).length;
+            screenshotCache = {};
+            localStorage.removeItem(STORAGE_KEY_SCREENSHOTS);
+            console.log(`🗑️ ${cacheCount} screenshots removidos do cache`);
+            
             showToast('🔧 Validando e corrigindo URLs...', 'info');
             
             // ETAPA 1: Auto-corrige URLs quebradas (só github.io)
@@ -3015,6 +3032,8 @@
                 return;
             }
             
+            showToast(`🔄 Recarregando ${totalImages} previews...`, 'info');
+            
             allImages.forEach(img => {
                 // Mostra a imagem novamente se estava escondida
                 img.style.display = '';
@@ -3035,13 +3054,17 @@
                 const width = isSmallPreview ? 600 : 1200;
                 const height = isSmallPreview ? 400 : 800;
                 
-                // Usa thum.io diretamente (sem cache buster na URL do site)
-                const newSrc = SCREENSHOT_SERVICES[0](finalUrl, width, height);
+                // Usa thum.io com timestamp para forçar novo screenshot
+                const timestamp = Date.now() + Math.random(); // Random para evitar duplicatas
+                const newSrc = SCREENSHOT_SERVICES[0](finalUrl, width, height) + `&t=${timestamp}`;
                 
                 const newImg = new Image();
                 
                 newImg.onload = () => {
                     img.src = newSrc;
+                    // Adiciona ao cache (sem timestamp)
+                    const cleanSrc = SCREENSHOT_SERVICES[0](finalUrl, width, height);
+                    addScreenshotToCache(url, cleanSrc);
                     successCount++;
                     loadedCount++;
                     if (loadedCount === totalImages) {
@@ -3051,10 +3074,13 @@
                 
                 newImg.onerror = () => {
                     // Tenta serviço secundário
-                    const fallbackSrc = SCREENSHOT_SERVICES[1](finalUrl, width, height);
+                    console.log(`⚠️ Serviço 1 falhou, tentando serviço 2 para: ${url}`);
+                    const fallbackSrc = SCREENSHOT_SERVICES[1](finalUrl, width, height) + `&t=${timestamp}`;
                     const fallbackImg = new Image();
                     fallbackImg.onload = () => {
                         img.src = fallbackSrc;
+                        const cleanSrc = SCREENSHOT_SERVICES[1](finalUrl, width, height);
+                        addScreenshotToCache(url, cleanSrc);
                         successCount++;
                         loadedCount++;
                         img.dataset.fallbackIndex = '1';
@@ -3062,8 +3088,10 @@
                     };
                     fallbackImg.onerror = () => {
                         // Tenta terceiro serviço (WordPress mshots)
+                        console.log(`⚠️ Serviço 2 falhou, tentando serviço 3 para: ${url}`);
                         const fallback2Src = SCREENSHOT_SERVICES[2](finalUrl, width, height);
                         img.src = fallback2Src;
+                        addScreenshotToCache(url, fallback2Src);
                         img.dataset.fallbackIndex = '2';
                         loadedCount++;
                         if (loadedCount === totalImages) finishRefresh();
