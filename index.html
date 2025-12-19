@@ -1583,6 +1583,62 @@
         ];
         
         // ===========================================
+        // SISTEMA DE AUTO-DETECÇÃO DE URLs
+        // ===========================================
+        
+        // Mapeamento de domínios principais por cliente
+        const CLIENT_DOMAINS = {
+            'Motel Xenon': 'https://xenonmotel.com.br',
+            'Banca Pacheco': 'https://bancapacheco.com.br',
+            // Adicione outros clientes aqui
+        };
+        
+        // Função para auto-gerar liveUrl baseado no path do projeto
+        function autoGenerateLiveUrl(project, clientName) {
+            // Se já tem liveUrl válida, não faz nada
+            if (project.liveUrl && project.liveUrl.trim() !== '') {
+                return project.liveUrl;
+            }
+            
+            // Verifica se o cliente tem domínio principal configurado
+            const clientDomain = CLIENT_DOMAINS[clientName];
+            if (!clientDomain) {
+                return '';
+            }
+            
+            // Extrai o nome da subpasta do path
+            const pathParts = project.path.split('/');
+            if (pathParts.length > 1) {
+                // É uma subpasta - gera URL automaticamente
+                const subFolder = pathParts.slice(1).join('/').toLowerCase().replace(/\s+/g, '-');
+                const generatedUrl = `${clientDomain}/${subFolder}/`;
+                console.log(`🔄 Auto-gerada URL para "${project.name}": ${generatedUrl}`);
+                return generatedUrl;
+            }
+            
+            return '';
+        }
+        
+        // Aplica auto-geração de URLs para todos os projetos
+        function autoFillMissingUrls() {
+            let urlsGenerated = 0;
+            projectsData.forEach(client => {
+                client.projects.forEach(project => {
+                    if (!project.liveUrl || project.liveUrl.trim() === '') {
+                        const generatedUrl = autoGenerateLiveUrl(project, client.company);
+                        if (generatedUrl) {
+                            project.liveUrl = generatedUrl;
+                            urlsGenerated++;
+                        }
+                    }
+                });
+            });
+            if (urlsGenerated > 0) {
+                console.log(`✅ ${urlsGenerated} URLs auto-geradas para projetos sem liveUrl`);
+            }
+        }
+        
+        // ===========================================
         // INICIALIZAÇÃO - Carrega dados salvos do localStorage
         // ===========================================
         (function initializeFromStorage() {
@@ -1603,6 +1659,9 @@
                 });
                 console.log('✅ URLs dos projetos restauradas do localStorage');
             }
+            
+            // Auto-preenche URLs faltantes
+            autoFillMissingUrls();
         })();
 
         let currentFilter = 'all';
