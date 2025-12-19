@@ -1015,7 +1015,7 @@
         
         // Versão do mapeamento de domínios - incrementar quando adicionar novos domínios
         // v7: Garantir limpeza completa do cache ao atualizar
-        const DOMAINS_VERSION = 7;
+        const DOMAINS_VERSION = 8;
         const STORAGE_KEY_VERSION = 'dashboard_domains_version';
         
         // Função para verificar se precisa atualizar domínios
@@ -1145,18 +1145,19 @@
         
         // Função para obter URL pública (GitHub Pages ou domínio personalizado)
         // Agora suporta subpastas como /google, /meta, etc.
-        function getPublicUrl(githubPagesUrl, projectPath = '') {
-            if (!githubPagesUrl) return '';
+        function getPublicUrl(liveUrl, projectPath = '') {
+            if (!liveUrl) return '';
             
-            // Para URLs que não são do GitHub Pages (já são domínios personalizados ou externos)
-            if (!githubPagesUrl.includes('github.io')) {
-                return githubPagesUrl;
+            // Se a URL já é um domínio personalizado (não é github.io), retorna ela mesma
+            if (!liveUrl.includes('github.io')) {
+                console.log(`🌐 getPublicUrl: URL já é domínio personalizado: ${liveUrl}`);
+                return liveUrl;
             }
             
-            // Detecta o repositório e subpasta da URL
+            // Detecta o repositório e subpasta da URL do GitHub Pages
             // Exemplo: https://mediagrowthmkt-debug.github.io/KITCHEN-REMODELING-WOLF/google
             // Captura: repoName = KITCHEN-REMODELING-WOLF, subPath = /google
-            const urlParts = githubPagesUrl.replace(/^https?:\/\/[^\/]+\//, ''); // Remove domínio
+            const urlParts = liveUrl.replace(/^https?:\/\/[^\/]+\//, ''); // Remove domínio
             const pathParts = urlParts.split('/');
             const repoName = pathParts[0]; // Primeiro segmento é o nome do repo
             const subPath = pathParts.slice(1).join('/'); // Resto é subpasta
@@ -1173,7 +1174,7 @@
             }
             
             // Retorna a URL original do GitHub Pages
-            return githubPagesUrl;
+            return liveUrl;
         }
         
         // Função para extrair subpasta de uma URL
@@ -1184,12 +1185,17 @@
             return match && match[1] ? match[1] : '';
         }
         
-        // Função para verificar se projeto tem domínio personalizado
-        function hasCustomDomain(githubPagesUrl) {
-            if (!githubPagesUrl) return false;
-            if (!githubPagesUrl.includes('github.io')) return false;
+        // Função para verificar se projeto tem domínio personalizado (não é github.io)
+        function hasCustomDomain(liveUrl) {
+            if (!liveUrl) return false;
             
-            const urlParts = githubPagesUrl.replace(/^https?:\/\/[^\/]+\//, '');
+            // Se NÃO contém github.io, é um domínio personalizado
+            if (!liveUrl.includes('github.io')) {
+                return true; // URLs como xenonmotel.com.br são domínios personalizados
+            }
+            
+            // Para URLs github.io, verifica se tem CNAME mapeado
+            const urlParts = liveUrl.replace(/^https?:\/\/[^\/]+\//, '');
             const repoName = urlParts.split('/')[0];
             return CUSTOM_DOMAINS[repoName] ? true : false;
         }
@@ -2343,8 +2349,9 @@
                                 console.log(`📸 ${project.name}:`);
                                 console.log(`   liveUrl: ${project.liveUrl}`);
                                 console.log(`   publicUrl: ${publicUrl}`);
+                                console.log(`   isCustomDomain: ${isCustomDomain}`);
+                                console.log(`   href usado no link: ${publicUrl || '#'}`);
                                 console.log(`   screenshotTargetUrl: ${screenshotTargetUrl}`);
-                                console.log(`   screenshot: ${screenshotUrl}`);
                             }
                             
                             // Validação de consistência URL vs Nome
