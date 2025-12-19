@@ -1,0 +1,176 @@
+{
+  "total_checked": 26,
+  "active": 6,
+  "with_custom_domain": 6,
+  "not_found": 20,
+  "repositories": [
+    {
+      "repo_name": "KITCHEN-REMODELING-INNOV",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/KITCHEN-REMODELING-INNOV/",
+      "status": "not_found",
+      "status_code": 404
+    },
+    {
+      "repo_name": "CUSTOM-BUILT-INS-INNOV",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/CUSTOM-BUILT-INS-INNOV/",
+      "custom_domain": "built-ins.innovbuildersusa.com",
+      "final_url": "http://built-ins.innovbuildersusa.com/",
+      "status": "active",
+      "status_code": 200
+    },
+    {
+      "repo_name": "PAINTING",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/PAINTING/",
+      "custom_domain": "painting.innovbuildersusa.com",
+      "final_url": "http://painting.innovbuildersusa.com/",
+      "status": "active",
+      "status_code": 200
+    },
+    {
+      "repo_name": "STAIR-REMODELING-INNOV",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/STAIR-REMODELING-INNOV/",
+      "custom_domain": "stairs.innovbuildersusa.com",
+      "final_url": "http://stairs.innovbuildersusa.com/",
+      "status": "active",
+      "status_code": 200
+    },
+    {
+      "repo_name": "KITCHEN-REMODELING-WOLF",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/KITCHEN-REMODELING-WOLF/",
+      "custom_domain": "kitchen.wolfcarpenters.com",
+      "final_url": "http://kitchen.wolfcarpenters.com/",
+      "status": "active",
+      "status_code": 200
+    },
+    {
+      "repo_name": "BATHROOM-REMODELING-WOLF",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/BATHROOM-REMODELING-WOLF/",
+      "custom_domain": "bathroom.wolfcarpenters.com",
+      "final_url": "http://bathroom.wolfcarpenters.com/",
+      "status": "active",
+      "status_code": 200
+    },
+    {
+      "repo_name": "ADU-HOMEADDITION",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/ADU-HOMEADDITION/",
+      "custom_domain": "additions.wolfcarpenters.com",
+      "final_url": "http://additions.wolfcarpenters.com/",
+      "status": "active",
+      "status_code": 200
+    },
+    {
+      "repo_name": "03-LANDING-PAGE-PROMOCOES-BANCA",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/03-LANDING-PAGE-PROMOCOES-BANCA/",
+      "status": "not_found",
+      "status_code": 404
+    },
+    {
+      "repo_name": "05-lp-queijos-frios",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/05-lp-queijos-frios/",
+      "status": "not_found",
+      "status_code": 404
+    },
+    {
+      "repo_name": "06-link-bio-banca-pacheco",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/06-link-bio-banca-pacheco/",
+      "status": "not_found",
+      "status_code": 404
+    },
+    {
+      "repo_name": "AMCC-LP",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/AMCC-LP/",
+      "status": "not_found",
+      "status_code": 404
+    },
+    {
+      "repo_name": "LP-EMPRESAS-QUE-FATURAM-ACIMA-DE-MIL-REAIS-POR-M-S",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/LP-EMPRESAS-QUE-FATURAM-ACIMA-DE-MIL-REAIS-POR-M-S/",
+      "status": "not_found",
+      "status_code": 404
+    },
+    {
+      "repo_name": "LP-ESCOLAS-PARTICULARES",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/LP-ESCOLAS-PARTICULARES/",
+      "status": "not_found",
+      "status_code": 404
+    },
+    {
+      "repo_name": "LP-OTICA",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/LP-OTICA/",
+      "status": "not_found",
+      "status_code": 404
+    },
+    {
+      "repo_name": "01---LP-CONSULTORIA",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/01---LP-CONSULTORIA/",
+      "status": "not_found",
+      "status_code": 404
+    },
+    {
+      "repo_name": "02---LP-PROJETO-ARQUITETONICO",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/02---LP-PROJETO-ARQUITETONICO/",
+      "status": "not_found",
+      "status_code": 404
+    },
+    {
+      "repo_name": "03---LP-CONSULTORIA-ENGENHARIA",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/03---LP-CONSULTORIA-ENGENHARIA/",
+      "status": "not_found",
+      "status_code": 404
+    },
+    {
+      "repo_name": "04---LP-CONSULTORIA-ENGENHARIA-CIVIL",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/04---LP-CONSULTORIA-ENGENHARIA-CIVIL/",
+      "status": "not_found",
+      "status_code": 404
+    },
+    {
+      "repo_name": "05---LP-ESTABILIDADE-ESTRUTURAL",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/05---LP-ESTABILIDADE-ESTRUTURAL/",
+      "status": "not_found",
+      "status_code": 404
+    },
+    {
+      "repo_name": "06---LP-FISCALIZACAO-OBRAS",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/06---LP-FISCALIZACAO-OBRAS/",
+      "status": "not_found",
+      "status_code": 404
+    },
+    {
+      "repo_name": "07---LP-GERENCIAMENTO-OBRAS",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/07---LP-GERENCIAMENTO-OBRAS/",
+      "status": "not_found",
+      "status_code": 404
+    },
+    {
+      "repo_name": "08---LP-INSPECAO-PREDIAL",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/08---LP-INSPECAO-PREDIAL/",
+      "status": "not_found",
+      "status_code": 404
+    },
+    {
+      "repo_name": "09---LP-AVALIACAO-E-PERICIA",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/09---LP-AVALIACAO-E-PERICIA/",
+      "status": "not_found",
+      "status_code": 404
+    },
+    {
+      "repo_name": "LINKTREE",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/LINKTREE/",
+      "status": "not_found",
+      "status_code": 404
+    },
+    {
+      "repo_name": "LP-PROTEC-GRANITE-2",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/LP-PROTEC-GRANITE-2/",
+      "status": "not_found",
+      "status_code": 404
+    },
+    {
+      "repo_name": "LP-PROTEC-QUARTZ",
+      "github_pages_url": "https://mediagrowthmkt-debug.github.io/LP-PROTEC-QUARTZ/",
+      "status": "not_found",
+      "status_code": 404
+    }
+  ]
+}

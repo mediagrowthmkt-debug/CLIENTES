@@ -1,0 +1,193 @@
+{
+  "accessible": [
+    [
+      "Banca Pacheco - Site Principal",
+      "https://bancapacheco.com.br",
+      200,
+      "\u2705 ACESS\u00cdVEL"
+    ],
+    [
+      "Protec - Premium Granite",
+      "https://protecpremiumgranite.com",
+      200,
+      "\u2705 ACESS\u00cdVEL"
+    ],
+    [
+      "Wolf - Bathroom",
+      "https://bathroom.wolfcarpenters.com",
+      200,
+      "\u2705 ACESS\u00cdVEL"
+    ],
+    [
+      "Wolf - Kitchen",
+      "https://kitchen.wolfcarpenters.com",
+      200,
+      "\u2705 ACESS\u00cdVEL"
+    ],
+    [
+      "Wolf - ADU",
+      "https://adu.wolfcarpenters.com",
+      200,
+      "\u2705 ACESS\u00cdVEL"
+    ]
+  ],
+  "not_found": [
+    [
+      "AMCC - LP Padr\u00e3o",
+      "https://mediagrowthmkt-debug.github.io/AMCC-LP/LP%20PADR\u00c3O",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "AMCC - LP Padr\u00e3o/Google",
+      "https://mediagrowthmkt-debug.github.io/AMCC-LP/LP%20PADR\u00c3O/google",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "AMCC - LP Padr\u00e3o/Meta",
+      "https://mediagrowthmkt-debug.github.io/AMCC-LP/LP%20PADR\u00c3O/meta",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "AMCC - LP Empresas >1k",
+      "https://mediagrowthmkt-debug.github.io/LP-EMPRESAS-QUE-FATURAM-ACIMA-DE-MIL-REAIS-POR-M-S/",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "AMCC - LP Escolas",
+      "https://mediagrowthmkt-debug.github.io/LP-ESCOLAS-PARTICULARES/",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "AMCC - LP \u00d3tica",
+      "https://mediagrowthmkt-debug.github.io/LP-OTICA/",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "Banca Pacheco - Site Completo",
+      "https://mediagrowthmkt-debug.github.io/03-LANDING-PAGE-PROMOCOES-BANCA/02-SITE-COMPLETO-COPIA",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "Banca Pacheco - LP Promo\u00e7\u00f5es",
+      "https://mediagrowthmkt-debug.github.io/03-LANDING-PAGE-PROMOCOES-BANCA/",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "Banca Pacheco - LP Queijos",
+      "https://mediagrowthmkt-debug.github.io/05-lp-queijos-frios/",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "Banca Pacheco - Link Bio",
+      "https://mediagrowthmkt-debug.github.io/06-link-bio-banca-pacheco/",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "Banca Pacheco - T\u00e1buas",
+      "https://mediagrowthmkt-debug.github.io/07-TABOAS-DE-FRIOS/",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "Engitunnel - Consultoria",
+      "https://mediagrowthmkt-debug.github.io/LP-CONSULTORIA/",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "Engitunnel - Projeto Arq",
+      "https://mediagrowthmkt-debug.github.io/LP-PROJETO-ARQUITETONICO/",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "Engitunnel - Consultoria Eng",
+      "https://mediagrowthmkt-debug.github.io/03---LP-CONSULTORIA-ENGENHARIA/",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "Engitunnel - Eng Civil",
+      "https://mediagrowthmkt-debug.github.io/04---LP-CONSULTORIA-ENGENHARIA-CIVIL/",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "Engitunnel - Estabilidade",
+      "https://mediagrowthmkt-debug.github.io/05---LP-ESTABILIDADE-ESTRUTURAL/",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "Engitunnel - Fiscaliza\u00e7\u00e3o",
+      "https://mediagrowthmkt-debug.github.io/06---LP-FISCALIZACAO-OBRAS/",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "Engitunnel - Gerenciamento",
+      "https://mediagrowthmkt-debug.github.io/07---LP-GERENCIAMENTO-OBRAS/",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "Engitunnel - Inspe\u00e7\u00e3o",
+      "https://mediagrowthmkt-debug.github.io/08---LP-INSPECAO-PREDIAL/",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "Engitunnel - Avalia\u00e7\u00e3o",
+      "https://mediagrowthmkt-debug.github.io/09---LP-AVALIACAO-E-PERICIA/",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "Engitunnel - LinkTree",
+      "https://mediagrowthmkt-debug.github.io/LINKTREE/",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "Motel Xenon - LP 01",
+      "https://xenonmotel.netlify.app/landing-page-motel-01",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "Motel Xenon - LP 02",
+      "https://xenonmotel.netlify.app/landing-page-motel-02",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "Protec - Contractors",
+      "https://mediagrowthmkt-debug.github.io/LP-CONTRACTORS-ARQUITECTS/",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "Protec - Granite 2",
+      "https://mediagrowthmkt-debug.github.io/LP-PROTEC-GRANITE-2/",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ],
+    [
+      "Protec - Quartz",
+      "https://mediagrowthmkt-debug.github.io/LP-PROTEC-QUARTZ/",
+      404,
+      "\u274c N\u00c3O ENCONTRADO"
+    ]
+  ],
+  "error": []
+}

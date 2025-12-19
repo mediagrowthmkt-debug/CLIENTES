@@ -1,0 +1,22 @@
+# Ignorar subpastas de clientes (são repositórios separados)
+AMCC/
+BANCA PACHECO/
+CÂMARA/
+ENGITUNNEL/
+INNOV/
+MOTEL XENON/
+PROTEC/
+WOLF/
+
+# Arquivos de sistema
+.DS_Store
+.venv/
+__pycache__/
+*.pyc
+
+# Arquivos sensíveis
+.env
+*.log
+
+# Node modules (se houver)
+node_modules/

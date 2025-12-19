@@ -1,0 +1,107 @@
+{
+  "total_repos": 9,
+  "with_custom_domain": 9,
+  "github_pages_only": 0,
+  "repos_with_domains": [
+    {
+      "name": "05-lp-queijos-frios",
+      "full_name": "mediagrowthmkt-debug/05-lp-queijos-frios",
+      "homepage": null,
+      "description": null,
+      "html_url": "https://github.com/mediagrowthmkt-debug/05-lp-queijos-frios",
+      "created_at": "2025-11-26T19:27:37Z",
+      "updated_at": "2025-12-19T00:56:35Z",
+      "has_pages": true,
+      "custom_domain": "lp.bancapacheco.com.br"
+    },
+    {
+      "name": "06-link-bio-banca-pacheco",
+      "full_name": "mediagrowthmkt-debug/06-link-bio-banca-pacheco",
+      "homepage": null,
+      "description": null,
+      "html_url": "https://github.com/mediagrowthmkt-debug/06-link-bio-banca-pacheco",
+      "created_at": "2025-12-07T02:01:03Z",
+      "updated_at": "2025-12-19T00:57:40Z",
+      "has_pages": true,
+      "custom_domain": "links.bancapacheco.com.br"
+    },
+    {
+      "name": "ADU-HOMEADDITION",
+      "full_name": "mediagrowthmkt-debug/ADU-HOMEADDITION",
+      "homepage": null,
+      "description": null,
+      "html_url": "https://github.com/mediagrowthmkt-debug/ADU-HOMEADDITION",
+      "created_at": "2025-12-15T02:17:58Z",
+      "updated_at": "2025-12-18T20:23:09Z",
+      "has_pages": true,
+      "custom_domain": "additions.wolfcarpenters.com"
+    },
+    {
+      "name": "BATHROOM-REMODELING-WOLF",
+      "full_name": "mediagrowthmkt-debug/BATHROOM-REMODELING-WOLF",
+      "homepage": null,
+      "description": null,
+      "html_url": "https://github.com/mediagrowthmkt-debug/BATHROOM-REMODELING-WOLF",
+      "created_at": "2025-11-02T17:53:19Z",
+      "updated_at": "2025-12-18T20:20:41Z",
+      "has_pages": true,
+      "custom_domain": "bathroom.wolfcarpenters.com"
+    },
+    {
+      "name": "CUSTOM-BUILT-INS-INNOV",
+      "full_name": "mediagrowthmkt-debug/CUSTOM-BUILT-INS-INNOV",
+      "homepage": null,
+      "description": null,
+      "html_url": "https://github.com/mediagrowthmkt-debug/CUSTOM-BUILT-INS-INNOV",
+      "created_at": "2025-10-31T00:46:36Z",
+      "updated_at": "2025-12-18T22:11:38Z",
+      "has_pages": true,
+      "custom_domain": "built-ins.innovbuildersusa.com"
+    },
+    {
+      "name": "KITCHEN-REMODELING-INNOV",
+      "full_name": "mediagrowthmkt-debug/KITCHEN-REMODELING-INNOV",
+      "homepage": null,
+      "description": null,
+      "html_url": "https://github.com/mediagrowthmkt-debug/KITCHEN-REMODELING-INNOV",
+      "created_at": "2025-10-31T23:01:02Z",
+      "updated_at": "2025-12-19T00:33:39Z",
+      "has_pages": true,
+      "custom_domain": "kitchen.innovbuildersusa.com"
+    },
+    {
+      "name": "KITCHEN-REMODELING-WOLF",
+      "full_name": "mediagrowthmkt-debug/KITCHEN-REMODELING-WOLF",
+      "homepage": null,
+      "description": null,
+      "html_url": "https://github.com/mediagrowthmkt-debug/KITCHEN-REMODELING-WOLF",
+      "created_at": "2025-11-02T17:53:53Z",
+      "updated_at": "2025-12-18T20:25:06Z",
+      "has_pages": true,
+      "custom_domain": "kitchen.wolfcarpenters.com"
+    },
+    {
+      "name": "PAINTING",
+      "full_name": "mediagrowthmkt-debug/PAINTING",
+      "homepage": null,
+      "description": null,
+      "html_url": "https://github.com/mediagrowthmkt-debug/PAINTING",
+      "created_at": "2025-12-15T13:15:02Z",
+      "updated_at": "2025-12-19T00:35:29Z",
+      "has_pages": true,
+      "custom_domain": "painting.innovbuildersusa.com"
+    },
+    {
+      "name": "STAIR-REMODELING-INNOV",
+      "full_name": "mediagrowthmkt-debug/STAIR-REMODELING-INNOV",
+      "homepage": null,
+      "description": null,
+      "html_url": "https://github.com/mediagrowthmkt-debug/STAIR-REMODELING-INNOV",
+      "created_at": "2025-11-01T02:58:08Z",
+      "updated_at": "2025-12-19T00:32:08Z",
+      "has_pages": true,
+      "custom_domain": "stairs.innovbuildersusa.com"
+    }
+  ],
+  "repos_without_domains": []
+}
