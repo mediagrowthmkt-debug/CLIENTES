@@ -1014,7 +1014,7 @@
         const STORAGE_KEY_PROJECTS = 'dashboard_projects_data';
         
         // Versão do mapeamento de domínios - incrementar quando adicionar novos domínios
-        const DOMAINS_VERSION = 3;
+        const DOMAINS_VERSION = 4;
         const STORAGE_KEY_VERSION = 'dashboard_domains_version';
         
         // Função para verificar se precisa atualizar domínios
@@ -1197,7 +1197,7 @@
                         name: "LP Padrão",
                         path: "AMCC/LP PADRÃO",
                         localUrl: "AMCC/LP%20PADRÃO/index.html",
-                        liveUrl: "https://mediagrowthmkt-debug.github.io/AMCC-LP/LP%20PADRÃO",
+                        liveUrl: "https://landingpage.grupoamcc.com.br/",
                         githubUrl: "https://github.com/mediagrowthmkt-debug/AMCC-LP",
                         status: "active"
                     },
@@ -1205,14 +1205,14 @@
                         name: "LP Padrão - Google",
                         path: "AMCC/LP PADRÃO/google",
                         localUrl: "AMCC/LP%20PADRÃO/google/index.html",
-                        liveUrl: "https://mediagrowthmkt-debug.github.io/AMCC-LP/LP%20PADRÃO/google",
+                        liveUrl: "https://landingpage.grupoamcc.com.br/google/",
                         status: "active"
                     },
                     {
                         name: "LP Padrão - Meta",
                         path: "AMCC/LP PADRÃO/meta",
                         localUrl: "AMCC/LP%20PADRÃO/meta/index.html",
-                        liveUrl: "https://mediagrowthmkt-debug.github.io/AMCC-LP/LP%20PADRÃO/meta",
+                        liveUrl: "https://landingpage.grupoamcc.com.br/meta/",
                         status: "active"
                     },
                     {
@@ -1590,6 +1590,7 @@
         const CLIENT_DOMAINS = {
             'Motel Xenon': 'https://xenonmotel.com.br',
             'Banca Pacheco': 'https://bancapacheco.com.br',
+            'AMCC Contabilidade': 'https://landingpage.grupoamcc.com.br',
             // Adicione outros clientes aqui
         };
         
@@ -2561,7 +2562,7 @@
                     'LP-PROTEC-QUARTZ': 'quartz.protecpremiumgranite.com',
                     
                     // AMCC
-                    'AMCC-LP': 'lp.amcccontabilidade.com.br',
+                    'AMCC-LP': 'landingpage.grupoamcc.com.br',
                 };
                 
                 if (knownDomains[repo]) {
