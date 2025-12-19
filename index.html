@@ -1014,8 +1014,8 @@
         const STORAGE_KEY_PROJECTS = 'dashboard_projects_data';
         
         // Versão do mapeamento de domínios - incrementar quando adicionar novos domínios
-        // v5: Corrigido bug que sobrescrevia URLs corretas com dados antigos do localStorage
-        const DOMAINS_VERSION = 5;
+        // v6: Removida lógica de auto-correção que modificava URLs corretas incorretamente
+        const DOMAINS_VERSION = 6;
         const STORAGE_KEY_VERSION = 'dashboard_domains_version';
         
         // Função para verificar se precisa atualizar domínios
@@ -1797,15 +1797,15 @@
             }
         }
         
-        // Função para corrigir TODAS as URLs quebradas dos projetos
+        // Função para corrigir URLs do GitHub Pages que deveriam usar domínio customizado
         async function autoFixAllUrls() {
-            console.log('🔧 Iniciando auto-correção de URLs...');
+            console.log('🔧 Iniciando auto-correção de URLs (somente github.io → domínio custom)...');
             let correctedCount = 0;
             let errorCount = 0;
             
             for (const client of projectsData) {
                 for (const project of client.projects) {
-                    // CORREÇÃO 1: URLs do GitHub Pages que deveriam usar domínio customizado
+                    // Só corrige URLs que usam github.io
                     if (project.liveUrl && project.liveUrl.includes('github.io')) {
                         try {
                             const validation = await validateAndFixUrl(project.liveUrl, {
@@ -1823,38 +1823,6 @@
                         } catch (e) {
                             errorCount++;
                             console.error(`❌ Erro ao corrigir ${project.name}: ${e.message}`);
-                        }
-                    }
-                    
-                    // CORREÇÃO 2: Valida consistência entre path e liveUrl
-                    // Ex: path="MOTEL XENON/motel-criciuma" deve ter liveUrl contendo "motel-criciuma"
-                    if (project.liveUrl && project.path) {
-                        const pathParts = project.path.split('/');
-                        const subfolder = pathParts[pathParts.length - 1].toLowerCase();
-                        const liveUrlLower = project.liveUrl.toLowerCase();
-                        
-                        // Se o path tem subpasta mas a liveUrl não inclui essa subpasta
-                        if (pathParts.length > 1 && subfolder.length > 3) {
-                            // Normaliza para comparação (remove espaços, acentos, etc)
-                            const normalizedSubfolder = subfolder.replace(/\s+/g, '-').replace(/[áàâã]/g, 'a').replace(/[éèê]/g, 'e').replace(/[íìî]/g, 'i').replace(/[óòôõ]/g, 'o').replace(/[úùû]/g, 'u');
-                            
-                            // Verifica se a URL termina só com o domínio (sem a subpasta)
-                            const urlPath = project.liveUrl.replace(/^https?:\/\/[^\/]+/, '').replace(/\/$/, '');
-                            
-                            if (!urlPath || urlPath === '' || urlPath === '/') {
-                                // URL está apontando para a raiz, mas deveria ter subpasta
-                                // Tenta auto-corrigir adicionando a subpasta
-                                const domain = project.liveUrl.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
-                                const correctedUrl = `https://${domain}/${normalizedSubfolder}/`;
-                                
-                                console.log(`⚠️ INCONSISTÊNCIA DETECTADA: ${client.company} / ${project.name}`);
-                                console.log(`   Path: ${project.path}`);
-                                console.log(`   URL atual (raiz): ${project.liveUrl}`);
-                                console.log(`   URL corrigida: ${correctedUrl}`);
-                                
-                                project.liveUrl = correctedUrl;
-                                correctedCount++;
-                            }
                         }
                     }
                 }
