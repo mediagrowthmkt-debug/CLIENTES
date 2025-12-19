@@ -1640,6 +1640,198 @@
         }
         
         // ===========================================
+        // SISTEMA DE AUTO-CORREÇÃO DE URLs QUEBRADAS
+        // ===========================================
+        
+        // Cache de URLs validadas/corrigidas (evita validar a mesma URL múltiplas vezes)
+        const URL_VALIDATION_CACHE = {};
+        
+        // Função para extrair informações do repositório de uma URL
+        function extractRepoFromUrl(url) {
+            if (!url) return null;
+            
+            // Padrão GitHub Pages: https://user.github.io/REPO/path
+            const ghPagesMatch = url.match(/https?:\/\/([^.]+)\.github\.io\/([^\/]+)(\/.*)?/);
+            if (ghPagesMatch) {
+                return {
+                    username: ghPagesMatch[1],
+                    repo: ghPagesMatch[2],
+                    subPath: ghPagesMatch[3] || ''
+                };
+            }
+            
+            return null;
+        }
+        
+        // Função para buscar CNAME de um repositório
+        async function fetchCNAME(username, repo) {
+            const branches = ['main', 'master', 'gh-pages'];
+            
+            for (const branch of branches) {
+                try {
+                    const response = await fetch(
+                        `https://raw.githubusercontent.com/${username}/${repo}/${branch}/CNAME`,
+                        { method: 'GET', cache: 'no-cache' }
+                    );
+                    
+                    if (response.ok) {
+                        const cname = (await response.text()).trim();
+                        if (cname && cname.includes('.') && !cname.includes('github.io')) {
+                            return cname;
+                        }
+                    }
+                } catch (e) {
+                    // Ignora erros silenciosamente
+                }
+            }
+            
+            return null;
+        }
+        
+        // Função principal de validação e correção de URL
+        async function validateAndFixUrl(url, projectInfo = {}) {
+            if (!url || !url.trim()) return { valid: false, url: '', error: 'URL vazia' };
+            
+            // Normaliza URL
+            let normalizedUrl = url.trim();
+            if (!normalizedUrl.startsWith('http')) {
+                normalizedUrl = 'https://' + normalizedUrl;
+            }
+            
+            // Verifica cache primeiro
+            if (URL_VALIDATION_CACHE[normalizedUrl]) {
+                const cached = URL_VALIDATION_CACHE[normalizedUrl];
+                if (Date.now() - cached.timestamp < 300000) { // Cache válido por 5 minutos
+                    return cached.result;
+                }
+            }
+            
+            try {
+                // Extrai informações do repositório se for GitHub Pages
+                const repoInfo = extractRepoFromUrl(normalizedUrl);
+                
+                if (repoInfo) {
+                    // É uma URL do GitHub Pages - vamos verificar se tem CNAME
+                    console.log(`🔍 Verificando CNAME para ${repoInfo.repo}...`);
+                    
+                    const cname = await fetchCNAME(repoInfo.username, repoInfo.repo);
+                    
+                    if (cname) {
+                        // Constrói a nova URL com o domínio customizado
+                        let newUrl = `https://${cname}`;
+                        
+                        // O subPath do GitHub Pages muitas vezes inclui o nome do repo duplicado
+                        // Ex: github.io/AMCC-LP/LP%20PADRÃO → landingpage.grupoamcc.com.br/ (não /LP%20PADRÃO)
+                        // Precisamos verificar se a estrutura do domínio customizado é diferente
+                        
+                        // Se a subPath é o "index" ou raiz do repo, não adiciona
+                        const cleanSubPath = repoInfo.subPath.replace(/^\//, '').replace(/\/$/, '');
+                        
+                        // Verifica se o subPath é uma pasta real do repo ou uma pasta "virtual"
+                        if (cleanSubPath) {
+                            // Tenta verificar se o caminho existe no domínio customizado
+                            try {
+                                const testUrl = `https://${cname}/${cleanSubPath}/`;
+                                const testResponse = await fetch(testUrl, { 
+                                    method: 'HEAD', 
+                                    mode: 'cors',
+                                    cache: 'no-cache'
+                                });
+                                
+                                if (testResponse.ok) {
+                                    newUrl = testUrl;
+                                    console.log(`✅ Subpasta validada: ${testUrl}`);
+                                } else {
+                                    // Tenta sem trailing slash
+                                    const testUrl2 = `https://${cname}/${cleanSubPath}`;
+                                    const testResponse2 = await fetch(testUrl2, { 
+                                        method: 'HEAD', 
+                                        mode: 'cors',
+                                        cache: 'no-cache'
+                                    });
+                                    
+                                    if (testResponse2.ok) {
+                                        newUrl = testUrl2;
+                                    } else {
+                                        // Subpasta não existe, usa raiz
+                                        console.log(`⚠️ Subpasta ${cleanSubPath} não existe no domínio, usando raiz`);
+                                        newUrl = `https://${cname}/`;
+                                    }
+                                }
+                            } catch (e) {
+                                // Em caso de erro CORS, assume que a URL está correta
+                                newUrl = `https://${cname}/${cleanSubPath}/`;
+                            }
+                        } else {
+                            newUrl = `https://${cname}/`;
+                        }
+                        
+                        console.log(`🔄 URL corrigida: ${normalizedUrl} → ${newUrl}`);
+                        
+                        const result = { 
+                            valid: true, 
+                            url: newUrl, 
+                            corrected: true, 
+                            originalUrl: normalizedUrl,
+                            cname: cname
+                        };
+                        
+                        URL_VALIDATION_CACHE[normalizedUrl] = { result, timestamp: Date.now() };
+                        return result;
+                    }
+                }
+                
+                // URL não é GitHub Pages ou não tem CNAME - valida diretamente
+                const result = { valid: true, url: normalizedUrl, corrected: false };
+                URL_VALIDATION_CACHE[normalizedUrl] = { result, timestamp: Date.now() };
+                return result;
+                
+            } catch (error) {
+                console.error(`❌ Erro ao validar URL ${normalizedUrl}:`, error);
+                return { valid: false, url: normalizedUrl, error: error.message };
+            }
+        }
+        
+        // Função para corrigir TODAS as URLs quebradas dos projetos
+        async function autoFixAllUrls() {
+            console.log('🔧 Iniciando auto-correção de URLs...');
+            let correctedCount = 0;
+            let errorCount = 0;
+            
+            for (const client of projectsData) {
+                for (const project of client.projects) {
+                    if (project.liveUrl && project.liveUrl.includes('github.io')) {
+                        try {
+                            const validation = await validateAndFixUrl(project.liveUrl, {
+                                client: client.company,
+                                project: project.name
+                            });
+                            
+                            if (validation.corrected && validation.url !== project.liveUrl) {
+                                console.log(`✅ ${client.company} / ${project.name}:`);
+                                console.log(`   Antes: ${project.liveUrl}`);
+                                console.log(`   Depois: ${validation.url}`);
+                                project.liveUrl = validation.url;
+                                correctedCount++;
+                            }
+                        } catch (e) {
+                            errorCount++;
+                            console.error(`❌ Erro ao corrigir ${project.name}: ${e.message}`);
+                        }
+                    }
+                }
+            }
+            
+            if (correctedCount > 0) {
+                // Salva as correções
+                saveProjectsToStorage(projectsData);
+                console.log(`✅ ${correctedCount} URLs corrigidas automaticamente!`);
+            }
+            
+            return { corrected: correctedCount, errors: errorCount };
+        }
+        
+        // ===========================================
         // INICIALIZAÇÃO - Carrega dados salvos do localStorage
         // ===========================================
         (function initializeFromStorage() {
@@ -1877,8 +2069,8 @@
             parent.appendChild(img);
         }
 
-        // Função para refresh imediato do preview do card
-        function refreshPreview(btn, url) {
+        // Função para refresh imediato do preview do card (com auto-correção de URL)
+        async function refreshPreview(btn, url) {
             // Impede propagação do evento
             event.stopPropagation();
             
@@ -1895,45 +2087,94 @@
             
             // Ativa animação do botão
             btn.classList.add('refreshing');
+            showToast('🔍 Verificando e validando URL...', 'info');
             
-            // Remove fallback se existir
-            const fallback = preview.querySelector('.preview-fallback');
-            if (fallback) {
-                fallback.remove();
-                img.style.display = '';
+            try {
+                // VALIDA E CORRIGE A URL AUTOMATICAMENTE
+                const validation = await validateAndFixUrl(url);
+                let finalUrl = validation.url;
+                
+                if (validation.corrected) {
+                    console.log(`🔄 URL auto-corrigida: ${url} → ${finalUrl}`);
+                    showToast(`✅ URL corrigida: ${validation.cname}`, 'success');
+                    
+                    // Atualiza a URL no data-attribute do botão para futuras chamadas
+                    btn.setAttribute('onclick', `refreshPreview(this, '${finalUrl}')`);
+                    
+                    // Atualiza também no projectsData
+                    updateProjectUrl(url, finalUrl);
+                }
+                
+                if (!finalUrl.startsWith('http')) {
+                    finalUrl = 'https://' + finalUrl;
+                }
+                
+                // Remove fallback se existir
+                const fallback = preview.querySelector('.preview-fallback');
+                if (fallback) {
+                    fallback.remove();
+                    img.style.display = '';
+                }
+                
+                // Reset do fallback index
+                img.dataset.fallbackIndex = '0';
+                img.dataset.url = finalUrl;
+                
+                // Gera nova URL com cache-buster
+                const timestamp = Date.now();
+                const newSrc = SCREENSHOT_SERVICES[0](finalUrl, 1200, 800) + '&t=' + timestamp;
+                
+                // Carrega nova imagem
+                const tempImg = new Image();
+                tempImg.onload = function() {
+                    img.src = newSrc;
+                    btn.classList.remove('refreshing');
+                    showToast('✅ Preview atualizado!', 'success');
+                };
+                tempImg.onerror = function() {
+                    // Tenta próximo serviço
+                    const newSrc2 = SCREENSHOT_SERVICES[1](finalUrl, 1200, 800) + '&t=' + timestamp;
+                    img.dataset.fallbackIndex = '1';
+                    img.src = newSrc2;
+                    btn.classList.remove('refreshing');
+                };
+                tempImg.src = newSrc;
+                
+            } catch (error) {
+                console.error('Erro ao validar URL:', error);
+                btn.classList.remove('refreshing');
+                showToast('⚠️ Erro ao validar URL', 'error');
             }
-            
-            // Reset do fallback index
-            img.dataset.fallbackIndex = '0';
-            
-            // Gera nova URL com cache-buster
-            const finalUrl = url.startsWith('http') ? url : `https://${url}`;
-            const timestamp = Date.now();
-            const newSrc = SCREENSHOT_SERVICES[0](finalUrl, 1200, 800) + '&t=' + timestamp;
-            
-            // Carrega nova imagem
-            const tempImg = new Image();
-            tempImg.onload = function() {
-                img.src = newSrc;
-                btn.classList.remove('refreshing');
-            };
-            tempImg.onerror = function() {
-                // Tenta próximo serviço
-                const newSrc2 = SCREENSHOT_SERVICES[1](finalUrl, 1200, 800) + '&t=' + timestamp;
-                img.dataset.fallbackIndex = '1';
-                img.src = newSrc2;
-                btn.classList.remove('refreshing');
-            };
-            tempImg.src = newSrc;
             
             // Timeout de segurança
             setTimeout(() => {
                 btn.classList.remove('refreshing');
-            }, 8000);
+            }, 10000);
+        }
+        
+        // Função auxiliar para atualizar URL do projeto no projectsData
+        function updateProjectUrl(oldUrl, newUrl) {
+            if (oldUrl === newUrl) return;
+            
+            for (const client of projectsData) {
+                for (const project of client.projects) {
+                    // Normaliza URLs para comparação
+                    const normalizedOld = oldUrl.replace(/\/$/, '').toLowerCase();
+                    const projectUrl = (project.liveUrl || '').replace(/\/$/, '').toLowerCase();
+                    
+                    if (projectUrl === normalizedOld || decodeURIComponent(projectUrl) === decodeURIComponent(normalizedOld)) {
+                        project.liveUrl = newUrl;
+                        console.log(`📝 Projeto "${project.name}" atualizado: ${newUrl}`);
+                        saveProjectsToStorage(projectsData);
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
 
-        // Função para refresh do preview na visualização em lista
-        function refreshPreviewList(btn, url) {
+        // Função para refresh do preview na visualização em lista (com auto-correção de URL)
+        async function refreshPreviewList(btn, url) {
             // Impede propagação do evento
             event.stopPropagation();
             
@@ -1951,40 +2192,61 @@
             // Ativa animação do botão
             btn.classList.add('refreshing');
             
-            // Remove fallback se existir
-            const fallback = preview.querySelector('.preview-fallback');
-            if (fallback) {
-                fallback.remove();
-                img.style.display = '';
+            try {
+                // VALIDA E CORRIGE A URL AUTOMATICAMENTE
+                const validation = await validateAndFixUrl(url);
+                let finalUrl = validation.url;
+                
+                if (validation.corrected) {
+                    console.log(`🔄 URL auto-corrigida: ${url} → ${finalUrl}`);
+                    showToast(`✅ URL corrigida: ${validation.cname}`, 'success');
+                    btn.setAttribute('onclick', `refreshPreviewList(this, '${finalUrl}')`);
+                    updateProjectUrl(url, finalUrl);
+                }
+                
+                if (!finalUrl.startsWith('http')) {
+                    finalUrl = 'https://' + finalUrl;
+                }
+                
+                // Remove fallback se existir
+                const fallback = preview.querySelector('.preview-fallback');
+                if (fallback) {
+                    fallback.remove();
+                    img.style.display = '';
+                }
+                
+                // Reset do fallback index
+                img.dataset.fallbackIndex = '0';
+                img.dataset.url = finalUrl;
+                
+                // Gera nova URL com cache-buster (tamanho menor para lista)
+                const timestamp = Date.now();
+                const newSrc = SCREENSHOT_SERVICES[0](finalUrl, 600, 400) + '&t=' + timestamp;
+                
+                // Carrega nova imagem
+                const tempImg = new Image();
+                tempImg.onload = function() {
+                    img.src = newSrc;
+                    btn.classList.remove('refreshing');
+                };
+                tempImg.onerror = function() {
+                    const newSrc2 = SCREENSHOT_SERVICES[1](finalUrl, 600, 400) + '&t=' + timestamp;
+                    img.dataset.fallbackIndex = '1';
+                    img.src = newSrc2;
+                    btn.classList.remove('refreshing');
+                };
+                tempImg.src = newSrc;
+                
+            } catch (error) {
+                console.error('Erro ao validar URL:', error);
+                btn.classList.remove('refreshing');
+                showToast('⚠️ Erro ao validar URL', 'error');
             }
-            
-            // Reset do fallback index
-            img.dataset.fallbackIndex = '0';
-            
-            // Gera nova URL com cache-buster (tamanho menor para lista)
-            const finalUrl = url.startsWith('http') ? url : `https://${url}`;
-            const timestamp = Date.now();
-            const newSrc = SCREENSHOT_SERVICES[0](finalUrl, 600, 400) + '&t=' + timestamp;
-            
-            // Carrega nova imagem
-            const tempImg = new Image();
-            tempImg.onload = function() {
-                img.src = newSrc;
-                btn.classList.remove('refreshing');
-            };
-            tempImg.onerror = function() {
-                // Tenta próximo serviço
-                const newSrc2 = SCREENSHOT_SERVICES[1](finalUrl, 600, 400) + '&t=' + timestamp;
-                img.dataset.fallbackIndex = '1';
-                img.src = newSrc2;
-                btn.classList.remove('refreshing');
-            };
-            tempImg.src = newSrc;
             
             // Timeout de segurança
             setTimeout(() => {
                 btn.classList.remove('refreshing');
-            }, 8000);
+            }, 10000);
         }
 
         function getPlaceholderPreview(name) {
@@ -2189,10 +2451,20 @@
             document.getElementById('previewFrame').src = '';
         }
         
-        function refreshPreviews() {
+        async function refreshPreviews() {
             const btn = event.target.closest('.refresh-btn');
             btn.classList.add('refreshing');
             btn.disabled = true;
+            
+            showToast('🔧 Validando e corrigindo URLs...', 'info');
+            
+            // ETAPA 1: Auto-corrige URLs quebradas
+            const fixResult = await autoFixAllUrls();
+            if (fixResult.corrected > 0) {
+                showToast(`✅ ${fixResult.corrected} URLs corrigidas!`, 'success');
+                // Re-renderiza para usar as novas URLs
+                renderProjects();
+            }
             
             // Adiciona timestamp para forçar reload das imagens
             const timestamp = new Date().getTime();
@@ -2265,7 +2537,7 @@
                         minute: '2-digit'
                     });
                     
-                    showToast('Previews atualizados com sucesso!', 'success');
+                    showToast('✅ Previews atualizados!', 'success');
                 }, 500);
             }
             
@@ -2392,10 +2664,22 @@
             btn.disabled = true;
             span.textContent = 'Buscando no GitHub...';
             
-            showToast('🔄 Buscando TODOS os repositórios públicos do GitHub...', 'info');
+            showToast('🔄 Buscando repositórios e corrigindo URLs automaticamente...', 'info');
             
             try {
-                // BUSCA TODOS OS REPOSITÓRIOS PÚBLICOS DO GITHUB
+                // ETAPA 1: Auto-corrige URLs quebradas que usam github.io mas deveriam usar domínio customizado
+                console.log('\n🔧 ETAPA 1: Auto-corrigindo URLs com domínios customizados...');
+                span.textContent = 'Corrigindo URLs...';
+                
+                const fixResult = await autoFixAllUrls();
+                if (fixResult.corrected > 0) {
+                    showToast(`✅ ${fixResult.corrected} URLs corrigidas automaticamente!`, 'success');
+                }
+                
+                // ETAPA 2: BUSCA TODOS OS REPOSITÓRIOS PÚBLICOS DO GITHUB
+                console.log('\n🌐 ETAPA 2: Buscando repositórios no GitHub...');
+                span.textContent = 'Buscando repositórios...';
+                
                 const allGitHubRepos = await fetchAllGitHubRepos();
                 
                 console.log('\n🌐 REPOSITÓRIOS ENCONTRADOS NO GITHUB:');
@@ -2455,10 +2739,14 @@
                 // 💾 SALVA projectsData atualizado no localStorage
                 saveProjectsToStorage(projectsData);
                 
-                if (updatedProjects > 0) {
-                    showToast(`✅ ${foundCount} domínios detectados, ${updatedProjects} projetos atualizados e salvos!`, 'success');
+                // Resumo final
+                const totalFixed = (fixResult?.corrected || 0) + updatedProjects;
+                if (totalFixed > 0) {
+                    showToast(`✅ ${totalFixed} projetos corrigidos/atualizados!`, 'success');
+                } else if (foundCount > 0) {
+                    showToast(`ℹ️ ${foundCount} domínios encontrados. Todos já estavam corretos.`, 'info');
                 } else {
-                    showToast(`ℹ️ ${foundCount} domínios encontrados e salvos para próxima sessão.`, 'info');
+                    showToast(`ℹ️ Nenhuma atualização necessária.`, 'info');
                 }
                 
                 // RE-RENDERIZA COMPLETAMENTE o dashboard para criar novos elementos com URLs atualizadas
@@ -2467,7 +2755,7 @@
                 
                 // Pequeno delay para garantir que o DOM foi atualizado
                 setTimeout(() => {
-                    showToast('✅ Dashboard atualizado! Previews carregarão automaticamente dos domínios personalizados.', 'success');
+                    showToast('✅ Dashboard atualizado! Previews usarão domínios corretos.', 'success');
                 }, 500);
                 
                 // Atualiza data
