@@ -1016,7 +1016,7 @@
         
         // Versão do mapeamento de domínios - incrementar quando adicionar novos domínios
         // v7: Garantir limpeza completa do cache ao atualizar
-        const DOMAINS_VERSION = 13;
+        const DOMAINS_VERSION = 14;
         const STORAGE_KEY_VERSION = 'dashboard_domains_version';
         
         // Configuração de cache de screenshots
@@ -3009,15 +3009,31 @@
             
             // ETAPA 1: Auto-corrige URLs quebradas (só github.io)
             const fixResult = await autoFixAllUrls();
+            
+            // Se corrigiu URLs, precisa re-renderizar TUDO
             if (fixResult.corrected > 0) {
-                showToast(`✅ ${fixResult.corrected} URLs corrigidas!`, 'success');
+                showToast(`✅ ${fixResult.corrected} URLs corrigidas! Re-renderizando...`, 'success');
                 // Re-renderiza para usar as novas URLs
                 renderProjects();
-                // Aguarda renderização
-                await new Promise(r => setTimeout(r, 500));
+                
+                btn.classList.remove('refreshing');
+                btn.disabled = false;
+                showToast('✅ Dashboard atualizado com novas URLs!', 'success');
+                
+                // Atualiza data
+                document.getElementById('updateDate').textContent = new Date().toLocaleDateString('pt-BR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                return; // Sai da função - não tenta recarregar imagens antigas
             }
             
-            // Re-busca imagens após possível re-render
+            // Se NÃO corrigiu URLs, só atualiza os previews existentes
+            // Re-busca imagens (agora sem re-render)
             const allImages = document.querySelectorAll('.project-preview img, .list-preview img');
             
             // Remove todos os fallbacks existentes
@@ -3103,6 +3119,9 @@
             });
             
             function finishRefresh() {
+                // Salva o cache atualizado
+                saveScreenshotCache();
+                
                 setTimeout(() => {
                     btn.classList.remove('refreshing');
                     btn.disabled = false;
@@ -3116,7 +3135,16 @@
                         minute: '2-digit'
                     });
                     
-                    showToast(`✅ ${successCount}/${totalImages} previews atualizados!`, 'success');
+                    const message = successCount === totalImages 
+                        ? `✅ ${successCount}/${totalImages} previews atualizados e salvos!`
+                        : `⚠️ ${successCount}/${totalImages} previews atualizados (${totalImages - successCount} falharam)`;
+                    
+                    showToast(message, successCount === totalImages ? 'success' : 'warning');
+                    
+                    console.log(`📊 Resumo do refresh:`);
+                    console.log(`   ✅ Sucessos: ${successCount}`);
+                    console.log(`   ❌ Falhas: ${totalImages - successCount}`);
+                    console.log(`   💾 Cache salvos: ${Object.keys(screenshotCache).length}`);
                 }, 500);
             }
         }
