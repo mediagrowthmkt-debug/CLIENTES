@@ -1015,7 +1015,7 @@
         
         // Versão do mapeamento de domínios - incrementar quando adicionar novos domínios
         // v7: Garantir limpeza completa do cache ao atualizar
-        const DOMAINS_VERSION = 9;
+        const DOMAINS_VERSION = 10;
         const STORAGE_KEY_VERSION = 'dashboard_domains_version';
         
         // Função para verificar se precisa atualizar domínios
@@ -1812,6 +1812,189 @@
                 console.error(`❌ Erro ao validar URL ${normalizedUrl}:`, error);
                 return { valid: false, url: normalizedUrl, error: error.message };
             }
+        }
+        
+        // ===========================================
+        // SISTEMA DE DETECÇÃO E CORREÇÃO DE URLs QUEBRADAS
+        // ===========================================
+        
+        // Mapeamento de pastas locais para repositórios GitHub
+        // Usado para detectar automaticamente qual repositório corresponde a cada pasta
+        const LOCAL_TO_REPO_MAPPING = {
+            'MOTEL XENON': 'landing-page-motel',
+            'AMCC': 'AMCC-LP',
+            'BANCA PACHECO': null, // Site principal não está no GitHub
+            // Adicione outros mapeamentos conforme necessário
+        };
+        
+        // Função para detectar se uma URL externa existe (retorna 200 ou redirect válido)
+        async function checkUrlExists(url) {
+            if (!url || url === '' || url === '#') return { exists: false, reason: 'URL vazia' };
+            
+            try {
+                // Usa fetch com mode: 'no-cors' para evitar erros de CORS
+                // Isso não nos dá o status, mas podemos verificar se a requisição falha
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 5000);
+                
+                // Tenta fazer um HEAD request via proxy ou diretamente
+                const response = await fetch(url, {
+                    method: 'HEAD',
+                    mode: 'no-cors',
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                // Com no-cors, não temos acesso ao status, então assumimos que funciona
+                // se não houver erro de rede
+                return { exists: true };
+            } catch (error) {
+                // Erro de rede ou timeout
+                return { exists: false, reason: error.message };
+            }
+        }
+        
+        // Função para encontrar o repositório correto para um projeto local
+        async function findCorrectRepoForProject(project, clientName) {
+            const projectPath = project.path;
+            const projectName = project.name;
+            
+            // Extrai a pasta raiz do projeto
+            const rootFolder = projectPath.split('/')[0];
+            
+            console.log(`🔍 Buscando repositório para: ${projectPath} (cliente: ${clientName})`);
+            
+            // 1. Verifica se existe mapeamento direto
+            if (LOCAL_TO_REPO_MAPPING[rootFolder]) {
+                const repoName = LOCAL_TO_REPO_MAPPING[rootFolder];
+                console.log(`   📦 Mapeamento encontrado: ${rootFolder} → ${repoName}`);
+                
+                // Verifica se a subpasta existe no repositório
+                const subPath = projectPath.replace(rootFolder, '').replace(/^\//, '');
+                
+                if (subPath) {
+                    // Verifica se a subpasta existe no repositório
+                    try {
+                        const response = await fetch(
+                            `https://api.github.com/repos/${GITHUB_USERNAME}/${repoName}/contents/${subPath}`,
+                            { method: 'GET' }
+                        );
+                        
+                        if (response.ok) {
+                            console.log(`   ✅ Subpasta '${subPath}' existe no repo '${repoName}'`);
+                            return { repo: repoName, subPath: subPath, exists: true };
+                        } else {
+                            console.log(`   ⚠️ Subpasta '${subPath}' NÃO existe no repo '${repoName}'`);
+                            return { repo: repoName, subPath: subPath, exists: false };
+                        }
+                    } catch (e) {
+                        console.log(`   ❌ Erro ao verificar subpasta: ${e.message}`);
+                        return { repo: repoName, subPath: subPath, exists: false };
+                    }
+                } else {
+                    // Projeto é a raiz do repositório
+                    return { repo: repoName, subPath: '', exists: true };
+                }
+            }
+            
+            // 2. Tenta encontrar repositório pelo nome do projeto
+            const possibleRepoNames = [
+                projectPath.replace(/ /g, '-').toUpperCase(),
+                projectPath.replace(/ /g, '-').toLowerCase(),
+                rootFolder.replace(/ /g, '-'),
+                projectName.replace(/ /g, '-')
+            ];
+            
+            for (const repoName of possibleRepoNames) {
+                try {
+                    const response = await fetch(
+                        `https://api.github.com/repos/${GITHUB_USERNAME}/${repoName}`,
+                        { method: 'GET' }
+                    );
+                    
+                    if (response.ok) {
+                        console.log(`   ✅ Repositório encontrado: ${repoName}`);
+                        return { repo: repoName, subPath: '', exists: true };
+                    }
+                } catch (e) {
+                    // Continua tentando
+                }
+            }
+            
+            console.log(`   ❌ Nenhum repositório encontrado para: ${projectPath}`);
+            return null;
+        }
+        
+        // Função para detectar e corrigir URLs que apontam para páginas 404
+        async function detectAndFixBrokenUrls() {
+            console.log('\n🔍 Detectando URLs quebradas ou incorretas...');
+            let fixedCount = 0;
+            let brokenCount = 0;
+            const brokenUrls = [];
+            
+            for (const client of projectsData) {
+                for (const project of client.projects) {
+                    if (!project.liveUrl || project.liveUrl === '') continue;
+                    
+                    const url = project.liveUrl;
+                    
+                    // Ignora URLs do GitHub Pages (já tratadas por autoFixAllUrls)
+                    if (url.includes('github.io')) continue;
+                    
+                    // Verifica se a URL tem subpasta que pode não existir
+                    const urlObj = new URL(url);
+                    const hasSubPath = urlObj.pathname && urlObj.pathname !== '/' && urlObj.pathname !== '';
+                    
+                    if (hasSubPath) {
+                        console.log(`🔎 Verificando URL com subpasta: ${url}`);
+                        
+                        // Busca o repositório correto para este projeto
+                        const repoInfo = await findCorrectRepoForProject(project, client.company);
+                        
+                        if (repoInfo) {
+                            if (repoInfo.exists) {
+                                // A subpasta existe no repositório, verifica se o domínio está correto
+                                const customDomain = CUSTOM_DOMAINS[repoInfo.repo];
+                                if (customDomain) {
+                                    const correctUrl = repoInfo.subPath 
+                                        ? `https://${customDomain}/${repoInfo.subPath}/`
+                                        : `https://${customDomain}/`;
+                                    
+                                    if (url !== correctUrl && url !== correctUrl.replace(/\/$/, '')) {
+                                        console.log(`   ✏️ Corrigindo: ${url} → ${correctUrl}`);
+                                        project.liveUrl = correctUrl;
+                                        fixedCount++;
+                                    }
+                                }
+                            } else {
+                                // A subpasta NÃO existe - marca como URL quebrada
+                                console.log(`   ⚠️ URL quebrada (subpasta não publicada): ${url}`);
+                                brokenUrls.push({
+                                    client: client.company,
+                                    project: project.name,
+                                    url: url,
+                                    reason: `Subpasta '${repoInfo.subPath}' não existe no repositório '${repoInfo.repo}'`
+                                });
+                                
+                                // Limpa a URL para indicar que não está publicada
+                                project.liveUrl = '';
+                                brokenCount++;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (brokenUrls.length > 0) {
+                console.log('\n⚠️ URLs QUEBRADAS ENCONTRADAS:');
+                brokenUrls.forEach(item => {
+                    console.log(`   - ${item.client} / ${item.project}: ${item.url}`);
+                    console.log(`     Motivo: ${item.reason}`);
+                });
+            }
+            
+            return { fixed: fixedCount, broken: brokenCount, brokenUrls: brokenUrls };
         }
         
         // Função para corrigir URLs do GitHub Pages que deveriam usar domínio customizado
@@ -2756,7 +2939,19 @@
                 
                 const fixResult = await autoFixAllUrls();
                 if (fixResult.corrected > 0) {
-                    showToast(`✅ ${fixResult.corrected} URLs corrigidas automaticamente!`, 'success');
+                    showToast(`✅ ${fixResult.corrected} URLs github.io corrigidas!`, 'success');
+                }
+                
+                // ETAPA 2.5: Detecta e corrige URLs quebradas (subpastas inexistentes, etc)
+                console.log('\n🔍 ETAPA 2.5: Detectando URLs quebradas...');
+                span.textContent = 'Verificando URLs...';
+                
+                const brokenResult = await detectAndFixBrokenUrls();
+                if (brokenResult.fixed > 0) {
+                    showToast(`✅ ${brokenResult.fixed} URLs corrigidas!`, 'success');
+                }
+                if (brokenResult.broken > 0) {
+                    showToast(`⚠️ ${brokenResult.broken} URLs não publicadas detectadas`, 'warning');
                 }
                 
                 // ETAPA 3: BUSCA REPOSITÓRIOS DO GITHUB (para detectar novos domínios)
@@ -2823,7 +3018,16 @@
                 saveProjectsToStorage(projectsData);
                 
                 // Resumo final
-                const totalFixed = (fixResult?.corrected || 0) + updatedProjects;
+                const totalFixed = (fixResult?.corrected || 0) + (brokenResult?.fixed || 0) + updatedProjects;
+                const totalBroken = brokenResult?.broken || 0;
+                
+                console.log('\n📊 RESUMO DA SINCRONIZAÇÃO:');
+                console.log(`   ✅ URLs github.io corrigidas: ${fixResult?.corrected || 0}`);
+                console.log(`   ✅ URLs quebradas corrigidas: ${brokenResult?.fixed || 0}`);
+                console.log(`   ⚠️ URLs não publicadas: ${totalBroken}`);
+                console.log(`   🌐 Domínios personalizados: ${foundCount}`);
+                console.log(`   📦 Projetos atualizados: ${updatedProjects}`);
+                
                 if (totalFixed > 0) {
                     showToast(`✅ ${totalFixed} projetos corrigidos/atualizados!`, 'success');
                 } else if (foundCount > 0) {
