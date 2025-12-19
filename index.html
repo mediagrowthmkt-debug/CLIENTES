@@ -1905,20 +1905,14 @@
             // 1. thum.io - Grátis, rápido, boa qualidade (wait/3 = espera 3 segundos)
             (url, width = 1200, height = 800) => `https://image.thum.io/get/width/${width}/crop/${height}/wait/3/noanimate/${url}`,
             
-            // 2. ScreenshotOne - Muito confiável
-            (url, width = 1200, height = 800) => `https://api.screenshotone.com/take?access_key=free&url=${encodeURIComponent(url)}&viewport_width=${width}&viewport_height=${height}&format=png`,
-            
-            // 3. Screenshot Machine - Grátis com limite
-            (url, width = 1200, height = 800) => `https://api.screenshotmachine.com?key=free&url=${encodeURIComponent(url)}&dimension=${width}x${height}`,
-            
-            // 4. PagePeeker - Grátis, bom fallback
-            (url, width = 1200, height = 800) => `https://api.pagepeeker.com/v2/thumbs.php?size=x&url=${encodeURIComponent(url)}`,
-            
-            // 5. S-shot.ru - Grátis
+            // 2. S-shot.ru - Grátis e confiável
             (url, width = 1200, height = 800) => `https://s-shot.ru/${width}x${height}/${url}`,
             
-            // 6. Website Thumbnail - Outro fallback
-            (url, width = 1200, height = 800) => `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(url)}&screenshot=true`,
+            // 3. PagePeeker - Grátis, bom fallback
+            (url, width = 1200, height = 800) => `https://api.pagepeeker.com/v2/thumbs.php?size=x&url=${encodeURIComponent(url)}`,
+            
+            // 4. microlink.io - API grátis com limite generoso
+            (url, width = 1200, height = 800) => `https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=true&meta=false&embed=screenshot.url`,
         ];
         
         // Cache de serviços que falharam para evitar tentar novamente
@@ -2493,25 +2487,30 @@
             
             showToast('🔧 Validando e corrigindo URLs...', 'info');
             
-            // ETAPA 1: Auto-corrige URLs quebradas
+            // ETAPA 1: Auto-corrige URLs quebradas (só github.io)
             const fixResult = await autoFixAllUrls();
             if (fixResult.corrected > 0) {
                 showToast(`✅ ${fixResult.corrected} URLs corrigidas!`, 'success');
                 // Re-renderiza para usar as novas URLs
                 renderProjects();
+                // Aguarda renderização
+                await new Promise(r => setTimeout(r, 500));
             }
             
-            // Adiciona timestamp para forçar reload das imagens
-            const timestamp = new Date().getTime();
+            // Re-busca imagens após possível re-render
+            const allImages = document.querySelectorAll('.project-preview img, .list-preview img');
             
             // Remove todos os fallbacks existentes
             document.querySelectorAll('.preview-fallback').forEach(fb => fb.remove());
             
-            // Reseta todas as imagens (incluindo as que estavam escondidas)
-            const allImages = document.querySelectorAll('.project-preview img, .list-preview img');
-            
             let loadedCount = 0;
+            let successCount = 0;
             const totalImages = allImages.length;
+            
+            if (totalImages === 0) {
+                finishRefresh();
+                return;
+            }
             
             allImages.forEach(img => {
                 // Mostra a imagem novamente se estava escondida
@@ -2527,17 +2526,21 @@
                     return;
                 }
                 
-                // Gera nova URL com cache buster
+                // Gera nova URL (thum.io usa o timestamp na própria URL como cache buster)
                 const finalUrl = url.startsWith('http') ? url : `https://${url}`;
                 const isSmallPreview = img.closest('.list-preview');
                 const width = isSmallPreview ? 600 : 1200;
                 const height = isSmallPreview ? 400 : 800;
-                const newSrc = SCREENSHOT_SERVICES[0](finalUrl, width, height) + '&t=' + timestamp;
+                
+                // Adiciona timestamp como parte da URL para forçar novo screenshot
+                const urlWithCacheBuster = finalUrl + (finalUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
+                const newSrc = SCREENSHOT_SERVICES[0](urlWithCacheBuster, width, height);
                 
                 const newImg = new Image();
                 
                 newImg.onload = () => {
                     img.src = newSrc;
+                    successCount++;
                     loadedCount++;
                     if (loadedCount === totalImages) {
                         finishRefresh();
@@ -2545,8 +2548,8 @@
                 };
                 
                 newImg.onerror = () => {
-                    // Tenta serviço secundário
-                    const fallbackSrc = SCREENSHOT_SERVICES[1](finalUrl, width, height) + '&t=' + timestamp;
+                    // Tenta serviço secundário (sem cache buster para evitar problemas)
+                    const fallbackSrc = SCREENSHOT_SERVICES[1](finalUrl, width, height);
                     img.src = fallbackSrc;
                     img.dataset.fallbackIndex = '1';
                     loadedCount++;
@@ -2572,13 +2575,8 @@
                         minute: '2-digit'
                     });
                     
-                    showToast('✅ Previews atualizados!', 'success');
+                    showToast(`✅ ${successCount}/${totalImages} previews atualizados!`, 'success');
                 }, 500);
-            }
-            
-            // Se não houver imagens, finalizar imediatamente
-            if (totalImages === 0) {
-                finishRefresh();
             }
         }
         
