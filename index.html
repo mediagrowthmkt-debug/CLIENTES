@@ -1014,7 +1014,8 @@
         const STORAGE_KEY_PROJECTS = 'dashboard_projects_data';
         
         // Versão do mapeamento de domínios - incrementar quando adicionar novos domínios
-        const DOMAINS_VERSION = 4;
+        // v5: Corrigido bug que sobrescrevia URLs corretas com dados antigos do localStorage
+        const DOMAINS_VERSION = 5;
         const STORAGE_KEY_VERSION = 'dashboard_domains_version';
         
         // Função para verificar se precisa atualizar domínios
@@ -1022,6 +1023,10 @@
             try {
                 const savedVersion = localStorage.getItem(STORAGE_KEY_VERSION);
                 if (!savedVersion || parseInt(savedVersion) < DOMAINS_VERSION) {
+                    // Limpa dados antigos para evitar conflitos
+                    console.log('🧹 Limpando cache antigo (versão atualizada)...');
+                    localStorage.removeItem(STORAGE_KEY_DOMAINS);
+                    localStorage.removeItem(STORAGE_KEY_PROJECTS);
                     return true;
                 }
             } catch (e) {}
@@ -1800,6 +1805,7 @@
             
             for (const client of projectsData) {
                 for (const project of client.projects) {
+                    // CORREÇÃO 1: URLs do GitHub Pages que deveriam usar domínio customizado
                     if (project.liveUrl && project.liveUrl.includes('github.io')) {
                         try {
                             const validation = await validateAndFixUrl(project.liveUrl, {
@@ -1819,6 +1825,38 @@
                             console.error(`❌ Erro ao corrigir ${project.name}: ${e.message}`);
                         }
                     }
+                    
+                    // CORREÇÃO 2: Valida consistência entre path e liveUrl
+                    // Ex: path="MOTEL XENON/motel-criciuma" deve ter liveUrl contendo "motel-criciuma"
+                    if (project.liveUrl && project.path) {
+                        const pathParts = project.path.split('/');
+                        const subfolder = pathParts[pathParts.length - 1].toLowerCase();
+                        const liveUrlLower = project.liveUrl.toLowerCase();
+                        
+                        // Se o path tem subpasta mas a liveUrl não inclui essa subpasta
+                        if (pathParts.length > 1 && subfolder.length > 3) {
+                            // Normaliza para comparação (remove espaços, acentos, etc)
+                            const normalizedSubfolder = subfolder.replace(/\s+/g, '-').replace(/[áàâã]/g, 'a').replace(/[éèê]/g, 'e').replace(/[íìî]/g, 'i').replace(/[óòôõ]/g, 'o').replace(/[úùû]/g, 'u');
+                            
+                            // Verifica se a URL termina só com o domínio (sem a subpasta)
+                            const urlPath = project.liveUrl.replace(/^https?:\/\/[^\/]+/, '').replace(/\/$/, '');
+                            
+                            if (!urlPath || urlPath === '' || urlPath === '/') {
+                                // URL está apontando para a raiz, mas deveria ter subpasta
+                                // Tenta auto-corrigir adicionando a subpasta
+                                const domain = project.liveUrl.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+                                const correctedUrl = `https://${domain}/${normalizedSubfolder}/`;
+                                
+                                console.log(`⚠️ INCONSISTÊNCIA DETECTADA: ${client.company} / ${project.name}`);
+                                console.log(`   Path: ${project.path}`);
+                                console.log(`   URL atual (raiz): ${project.liveUrl}`);
+                                console.log(`   URL corrigida: ${correctedUrl}`);
+                                
+                                project.liveUrl = correctedUrl;
+                                correctedCount++;
+                            }
+                        }
+                    }
                 }
             }
             
@@ -1831,6 +1869,27 @@
             return { corrected: correctedCount, errors: errorCount };
         }
         
+        // Função para forçar limpeza do cache e usar URLs do código-fonte
+        function forceResetToSourceUrls() {
+            console.log('🔄 Forçando reset para URLs do código-fonte...');
+            
+            // Limpa todo o localStorage relacionado ao dashboard
+            localStorage.removeItem(STORAGE_KEY_DOMAINS);
+            localStorage.removeItem(STORAGE_KEY_PROJECTS);
+            localStorage.removeItem(STORAGE_KEY_VERSION);
+            
+            // Limpa cache de validação
+            Object.keys(URL_VALIDATION_CACHE).forEach(key => delete URL_VALIDATION_CACHE[key]);
+            
+            console.log('✅ Cache limpo! Recarregue a página para usar as URLs do código-fonte.');
+            showToast('✅ Cache limpo! Recarregando...', 'success');
+            
+            // Recarrega a página
+            setTimeout(() => {
+                window.location.reload(true);
+            }, 1000);
+        }
+        
         // ===========================================
         // INICIALIZAÇÃO - Carrega dados salvos do localStorage
         // ===========================================
@@ -1838,23 +1897,31 @@
             // Tenta carregar projectsData salvo do localStorage
             const savedProjects = loadProjectsFromStorage();
             if (savedProjects && Array.isArray(savedProjects)) {
-                // Atualiza liveUrls dos projetos com os dados salvos
+                // IMPORTANTE: Só usa dados do localStorage se a URL no código estiver VAZIA
+                // Isso evita que URLs antigas do localStorage sobrescrevam URLs corretas do código
                 savedProjects.forEach(savedClient => {
                     const currentClient = projectsData.find(c => c.company === savedClient.company);
                     if (currentClient) {
                         savedClient.projects.forEach(savedProject => {
                             const currentProject = currentClient.projects.find(p => p.name === savedProject.name);
-                            if (currentProject && savedProject.liveUrl) {
-                                currentProject.liveUrl = savedProject.liveUrl;
+                            // Só usa localStorage se o código não definiu uma liveUrl
+                            if (currentProject && (!currentProject.liveUrl || currentProject.liveUrl.trim() === '')) {
+                                if (savedProject.liveUrl) {
+                                    currentProject.liveUrl = savedProject.liveUrl;
+                                    console.log(`📥 URL restaurada do cache: ${currentProject.name} → ${savedProject.liveUrl}`);
+                                }
                             }
                         });
                     }
                 });
-                console.log('✅ URLs dos projetos restauradas do localStorage');
+                console.log('✅ Dados do localStorage verificados (URLs do código têm prioridade)');
             }
             
             // Auto-preenche URLs faltantes
             autoFillMissingUrls();
+            
+            // Força salvamento das URLs corretas do código no localStorage
+            saveProjectsToStorage(projectsData);
         })();
 
         let currentFilter = 'all';
