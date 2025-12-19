@@ -1014,8 +1014,8 @@
         const STORAGE_KEY_PROJECTS = 'dashboard_projects_data';
         
         // Versão do mapeamento de domínios - incrementar quando adicionar novos domínios
-        // v6: Removida lógica de auto-correção que modificava URLs corretas incorretamente
-        const DOMAINS_VERSION = 6;
+        // v7: Garantir limpeza completa do cache ao atualizar
+        const DOMAINS_VERSION = 7;
         const STORAGE_KEY_VERSION = 'dashboard_domains_version';
         
         // Função para verificar se precisa atualizar domínios
@@ -1027,11 +1027,15 @@
                     console.log('🧹 Limpando cache antigo (versão atualizada)...');
                     localStorage.removeItem(STORAGE_KEY_DOMAINS);
                     localStorage.removeItem(STORAGE_KEY_PROJECTS);
+                    localStorage.setItem(STORAGE_KEY_VERSION, DOMAINS_VERSION.toString());
                     return true;
                 }
             } catch (e) {}
             return false;
         }
+        
+        // Executa verificação de versão IMEDIATAMENTE
+        needsDomainsUpdate();
         
         // Função para salvar domínios no localStorage
         function saveDomainsToStorage(domains) {
@@ -2702,13 +2706,38 @@
             
             btn.classList.add('syncing');
             btn.disabled = true;
-            span.textContent = 'Buscando no GitHub...';
+            span.textContent = 'Limpando cache...';
             
-            showToast('🔄 Buscando repositórios e corrigindo URLs automaticamente...', 'info');
+            showToast('🧹 Limpando cache antigo...', 'info');
             
             try {
-                // ETAPA 1: Auto-corrige URLs quebradas que usam github.io mas deveriam usar domínio customizado
-                console.log('\n🔧 ETAPA 1: Auto-corrigindo URLs com domínios customizados...');
+                // ETAPA 0: LIMPA TODO O CACHE ANTIGO
+                console.log('\n🧹 ETAPA 0: Limpando cache antigo...');
+                localStorage.removeItem(STORAGE_KEY_DOMAINS);
+                localStorage.removeItem(STORAGE_KEY_PROJECTS);
+                Object.keys(URL_VALIDATION_CACHE).forEach(key => delete URL_VALIDATION_CACHE[key]);
+                console.log('✅ Cache limpo!');
+                
+                // ETAPA 1: RECARREGA URLs DO CÓDIGO-FONTE
+                // As URLs definidas no projectsData (no código HTML) são as corretas
+                // Não precisamos fazer nada aqui pois o código já tem as URLs certas
+                console.log('\n📋 ETAPA 1: Usando URLs do código-fonte (são as corretas)');
+                span.textContent = 'Validando URLs...';
+                
+                // Log das URLs atuais para debug
+                let urlCount = 0;
+                projectsData.forEach(client => {
+                    client.projects.forEach(project => {
+                        if (project.liveUrl) {
+                            console.log(`   ✅ ${project.name}: ${project.liveUrl}`);
+                            urlCount++;
+                        }
+                    });
+                });
+                console.log(`📊 Total: ${urlCount} URLs configuradas`);
+                
+                // ETAPA 2: Auto-corrige apenas URLs que usam github.io
+                console.log('\n🔧 ETAPA 2: Verificando URLs github.io...');
                 span.textContent = 'Corrigindo URLs...';
                 
                 const fixResult = await autoFixAllUrls();
@@ -2716,8 +2745,8 @@
                     showToast(`✅ ${fixResult.corrected} URLs corrigidas automaticamente!`, 'success');
                 }
                 
-                // ETAPA 2: BUSCA TODOS OS REPOSITÓRIOS PÚBLICOS DO GITHUB
-                console.log('\n🌐 ETAPA 2: Buscando repositórios no GitHub...');
+                // ETAPA 3: BUSCA REPOSITÓRIOS DO GITHUB (para detectar novos domínios)
+                console.log('\n🌐 ETAPA 3: Buscando repositórios no GitHub...');
                 span.textContent = 'Buscando repositórios...';
                 
                 const allGitHubRepos = await fetchAllGitHubRepos();
