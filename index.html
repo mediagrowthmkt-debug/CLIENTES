@@ -1902,17 +1902,14 @@
         
         // Lista de serviços de screenshot (em ordem de preferência)
         const SCREENSHOT_SERVICES = [
-            // 1. thum.io - Grátis, rápido, boa qualidade (wait/3 = espera 3 segundos)
-            (url, width = 1200, height = 800) => `https://image.thum.io/get/width/${width}/crop/${height}/wait/3/noanimate/${url}`,
+            // 1. thum.io - Grátis, rápido, boa qualidade (versão simplificada)
+            (url, width = 1200, height = 800) => `https://image.thum.io/get/width/${width}/crop/${height}/${url}`,
             
-            // 2. S-shot.ru - Grátis e confiável
-            (url, width = 1200, height = 800) => `https://s-shot.ru/${width}x${height}/${url}`,
+            // 2. thum.io com wait (para sites mais lentos)
+            (url, width = 1200, height = 800) => `https://image.thum.io/get/width/${width}/crop/${height}/wait/2/${url}`,
             
-            // 3. PagePeeker - Grátis, bom fallback
-            (url, width = 1200, height = 800) => `https://api.pagepeeker.com/v2/thumbs.php?size=x&url=${encodeURIComponent(url)}`,
-            
-            // 4. microlink.io - API grátis com limite generoso
-            (url, width = 1200, height = 800) => `https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=true&meta=false&embed=screenshot.url`,
+            // 3. Screenshot via Google (sempre funciona)
+            (url, width = 1200, height = 800) => `https://s.wordpress.com/mshots/v1/${encodeURIComponent(url)}?w=${width}&h=${height}`,
         ];
         
         // Cache de serviços que falharam para evitar tentar novamente
@@ -2526,15 +2523,14 @@
                     return;
                 }
                 
-                // Gera nova URL (thum.io usa o timestamp na própria URL como cache buster)
+                // Gera nova URL para screenshot
                 const finalUrl = url.startsWith('http') ? url : `https://${url}`;
                 const isSmallPreview = img.closest('.list-preview');
                 const width = isSmallPreview ? 600 : 1200;
                 const height = isSmallPreview ? 400 : 800;
                 
-                // Adiciona timestamp como parte da URL para forçar novo screenshot
-                const urlWithCacheBuster = finalUrl + (finalUrl.includes('?') ? '&' : '?') + '_t=' + Date.now();
-                const newSrc = SCREENSHOT_SERVICES[0](urlWithCacheBuster, width, height);
+                // Usa thum.io diretamente (sem cache buster na URL do site)
+                const newSrc = SCREENSHOT_SERVICES[0](finalUrl, width, height);
                 
                 const newImg = new Image();
                 
@@ -2548,14 +2544,25 @@
                 };
                 
                 newImg.onerror = () => {
-                    // Tenta serviço secundário (sem cache buster para evitar problemas)
+                    // Tenta serviço secundário
                     const fallbackSrc = SCREENSHOT_SERVICES[1](finalUrl, width, height);
-                    img.src = fallbackSrc;
-                    img.dataset.fallbackIndex = '1';
-                    loadedCount++;
-                    if (loadedCount === totalImages) {
-                        finishRefresh();
-                    }
+                    const fallbackImg = new Image();
+                    fallbackImg.onload = () => {
+                        img.src = fallbackSrc;
+                        successCount++;
+                        loadedCount++;
+                        img.dataset.fallbackIndex = '1';
+                        if (loadedCount === totalImages) finishRefresh();
+                    };
+                    fallbackImg.onerror = () => {
+                        // Tenta terceiro serviço (WordPress mshots)
+                        const fallback2Src = SCREENSHOT_SERVICES[2](finalUrl, width, height);
+                        img.src = fallback2Src;
+                        img.dataset.fallbackIndex = '2';
+                        loadedCount++;
+                        if (loadedCount === totalImages) finishRefresh();
+                    };
+                    fallbackImg.src = fallbackSrc;
                 };
                 
                 newImg.src = newSrc;
