@@ -610,10 +610,15 @@ async function handleFormSubmit(e) {
         const postHtml = await generatePostHtml(formData);
         
         console.log('📄 HTML gerado, tamanho:', postHtml.length, 'caracteres');
+        console.log('📄 Primeiros 100 chars do HTML:', postHtml.substring(0, 100));
         
         // Salva HTML globalmente para permitir download posterior
         lastGeneratedHtml = postHtml;
         lastGeneratedSlug = formData.slug;
+        
+        console.log('💾 HTML salvo globalmente!');
+        console.log('💾 lastGeneratedHtml length:', lastGeneratedHtml.length);
+        console.log('💾 lastGeneratedSlug:', lastGeneratedSlug);
         
         // Salva o post no servidor via PHP (com fallback automático)
         const result = await savePostToServer(postHtml, formData.slug);
@@ -1008,6 +1013,12 @@ function setupModals() {
 }
 
 function showSuccess(slug, result) {
+    console.log('🎉 showSuccess chamado!');
+    console.log('🎉 slug:', slug);
+    console.log('🎉 result:', result);
+    console.log('🎉 lastGeneratedHtml disponível?', !!lastGeneratedHtml);
+    console.log('🎉 lastGeneratedSlug:', lastGeneratedSlug);
+    
     const modal = document.getElementById('successModal');
     const pathElement = document.getElementById('postPath');
     
@@ -1054,16 +1065,32 @@ function showSuccess(slug, result) {
         downloadBtn.style.fontSize = '14px';
         downloadBtn.innerHTML = '📥 Baixar HTML Completo';
         
-        downloadBtn.onclick = function() {
-            if (lastGeneratedHtml && lastGeneratedSlug) {
-                console.log('📥 Iniciando download manual do HTML...');
-                console.log('📏 Tamanho:', lastGeneratedHtml.length, 'caracteres');
-                
+        modal.querySelector('.modal-content').appendChild(downloadBtn);
+    }
+    
+    // Sempre atualiza o evento onclick para garantir que funcione
+    downloadBtn.onclick = function() {
+        console.log('🔍 Debug - Botão clicado!');
+        console.log('🔍 Debug - lastGeneratedHtml existe?', !!lastGeneratedHtml);
+        console.log('🔍 Debug - lastGeneratedSlug:', lastGeneratedSlug);
+        
+        if (lastGeneratedHtml && lastGeneratedSlug) {
+            console.log('📥 Iniciando download manual do HTML...');
+            console.log('📏 Tamanho:', lastGeneratedHtml.length, 'caracteres');
+            
+            try {
                 const blob = new Blob([lastGeneratedHtml], { type: 'text/html; charset=utf-8' });
+                console.log('📦 Blob criado, tamanho:', blob.size, 'bytes');
+                
                 const url = URL.createObjectURL(blob);
+                console.log('🔗 URL criada:', url.substring(0, 50) + '...');
+                
                 const link = document.createElement('a');
                 link.href = url;
                 link.download = lastGeneratedSlug + '.html';
+                
+                console.log('📎 Link criado, filename:', link.download);
+                
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -1071,13 +1098,17 @@ function showSuccess(slug, result) {
                 
                 console.log('✅ Download concluído!');
                 alert('✅ Download iniciado! Verifique sua pasta de downloads.');
-            } else {
-                alert('❌ Erro: HTML não disponível. Gere o post novamente.');
+            } catch (error) {
+                console.error('❌ Erro ao criar download:', error);
+                alert('❌ Erro ao criar download: ' + error.message);
             }
-        };
-        
-        modal.querySelector('.modal-content').appendChild(downloadBtn);
-    }
+        } else {
+            console.error('❌ HTML não disponível!');
+            console.log('lastGeneratedHtml:', lastGeneratedHtml ? 'existe' : 'null');
+            console.log('lastGeneratedSlug:', lastGeneratedSlug ? lastGeneratedSlug : 'null');
+            alert('❌ Erro: HTML não disponível. Gere o post novamente.');
+        }
+    };
     
     modal.style.display = 'flex';
 }
