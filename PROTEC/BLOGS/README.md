@@ -64,7 +64,8 @@ Este sistema permite criar posts de blog profissionais de forma rápida e automa
 
 ```
 BLOGS/
-├── index.html                      # Formulário de criação
+├── index.html                      # 📚 Listagem de posts (público)
+├── postin.html                     # ✍️ Formulário de criação (restrito)
 ├── templates/
 │   └── post-template.html          # Template base dos posts
 ├── posts/                          # Posts gerados vão aqui
@@ -85,13 +86,14 @@ BLOGS/
 
 ### 1️⃣ Abrir o Formulário
 
-Abra o arquivo `index.html` no seu navegador:
+Abra o arquivo `postin.html` no seu navegador:
 
 ```bash
 # No macOS
-open /Users/bruno/Documents/LPS/CLIENTES/PROTEC/BLOGS/index.html
+open /Users/bruno/Documents/LPS/CLIENTES/PROTEC/BLOGS/postin.html
 
 # Ou arraste o arquivo para o navegador
+# Ou acesse: https://blog.protecpremiumgranite.com/postin
 ```
 
 ### 2️⃣ Preencher os Campos
@@ -418,7 +420,7 @@ Para dúvidas ou problemas:
 
 ## ✨ Começe Agora!
 
-1. Abra `index.html` no navegador
+1. Abra `postin.html` no navegador (ou acesse `/postin`)
 2. Preencha o formulário
 3. Gere seu primeiro post
 4. Publique e veja seu ranking melhorar!
@@ -427,5 +429,5 @@ Para dúvidas ou problemas:
 
 ---
 
-📝 **Última atualização**: Janeiro 2026
+📝 **Última atualização**: Janeiro 2026 - Ajuste de segurança nas URLs
 🚀 **Versão**: 1.0.0

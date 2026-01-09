@@ -1,0 +1,48 @@
+# Protec Blog - Configuração de URLs e Segurança
+
+# Habilitar RewriteEngine
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+    
+    # Redirecionar /postin para postin.html (sem extensão na URL)
+    RewriteRule ^postin$ postin.html [L,QSA]
+    
+    # Forçar HTTPS (descomente se necessário)
+    # RewriteCond %{HTTPS} off
+    # RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+# Segurança adicional para o formulário de criação
+<Files "postin.html">
+    # Adicione aqui restrições de IP se necessário
+    # Exemplo:
+    # Order Deny,Allow
+    # Deny from all
+    # Allow from 192.168.1.100
+    # Allow from 203.0.113.50
+</Files>
+
+# Headers de segurança
+<IfModule mod_headers.c>
+    # Prevenir clickjacking
+    Header always set X-Frame-Options "SAMEORIGIN"
+    
+    # Prevenir MIME sniffing
+    Header always set X-Content-Type-Options "nosniff"
+    
+    # XSS Protection
+    Header always set X-XSS-Protection "1; mode=block"
+    
+    # Referrer Policy
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# Desabilitar listagem de diretórios
+Options -Indexes
+
+# Proteção de arquivos sensíveis
+<FilesMatch "\.(md|log|json|env|git|gitignore)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
