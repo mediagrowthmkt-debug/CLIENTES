@@ -148,13 +148,22 @@ function clearFormData() {
 
 // Preenche formulário com dados fictícios para teste
 function fillTestData() {
+    // Formata data corretamente para datetime-local (YYYY-MM-DDTHH:MM)
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const dateTimeLocal = `${year}-${month}-${day}T${hours}:${minutes}`;
+    
     const testData = {
         h1Title: 'Marble vs Granite: Complete Guide for Worcester Homes',
         slug: 'marble-or-granite-guide-for-your-home-in-worcester',
         metaDescription: 'Discover the pros and cons of marble and granite countertops. Expert comparison guide for Worcester homeowners making the right choice.',
         category: 'Granite Countertops',
         author: 'Protec Team',
-        datePublished: new Date().toISOString().split('T')[0],
+        datePublished: dateTimeLocal, // Formato correto: YYYY-MM-DDTHH:MM
         coverImage: 'https://images.unsplash.com/photo-1556911220-bff31c812dba?w=800',
         coverImageAlt: 'Beautiful granite countertop installation in modern kitchen',
         introduction: 'Choosing between marble and granite countertops is one of the most important decisions for your Worcester home renovation. Both materials offer unique benefits and aesthetic appeal, but understanding their differences is crucial for making the right choice.',
@@ -209,6 +218,11 @@ function fillTestData() {
 
 // Gera slug automaticamente a partir do título
 function generateSlug(text) {
+    if (!text || typeof text !== 'string') {
+        console.warn('⚠️ generateSlug recebeu texto inválido:', text);
+        return '';
+    }
+    
     return text
         .toLowerCase()
         .normalize('NFD')
