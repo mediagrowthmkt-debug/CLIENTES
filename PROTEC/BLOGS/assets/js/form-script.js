@@ -767,36 +767,25 @@ async function savePostToServer(html, slug) {
 }
 
 function savePostAsDownload(html, slug) {
-    console.log('💾 Salvando post como download: ' + slug + '.html');
-    console.log('📏 Tamanho do HTML para download:', html.length, 'caracteres');
-    console.log('📄 Primeiros 200 chars:', html.substring(0, 200));
+    console.log('⚠️ Servidor indisponível - download será manual via botão');
+    console.log('📏 Tamanho do HTML:', html.length, 'caracteres');
     
     if (!html || html.trim().length === 0) {
-        console.error('❌ HTML vazio! Não pode baixar.');
-        throw new Error('HTML está vazio, não pode fazer download');
+        console.error('❌ HTML vazio!');
+        throw new Error('HTML está vazio');
     }
     
-    const blob = new Blob([html], { type: 'text/html; charset=utf-8' });
-    console.log('📦 Blob criado, tamanho:', blob.size, 'bytes');
-    
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = slug + '.html';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    
-    console.log('✅ Download iniciado com sucesso');
+    // NÃO faz download automático - apenas retorna informação
+    // O download será feito manualmente pelo botão no modal
     
     return {
         success: true,
         method: 'download',
         filename: slug + '.html',
-        message: 'Post salvo como download. Você pode copiar para a pasta /posts no servidor.'
+        message: '⚠️ Post NÃO foi salvo no servidor. Use o botão "📥 Baixar HTML Completo" no modal para fazer o download.'
     };
 }
+
 
 function collectFormData() {
     const form = document.getElementById('blogForm');
@@ -1117,9 +1106,10 @@ function showSuccess(slug, result) {
     }
     
     if (result && result.method === 'download') {
-        messageElement.innerHTML = '📥 <strong>Post baixado!</strong><br>Upload o arquivo para a pasta <code>/posts/</code> no servidor.';
+        messageElement.innerHTML = '⚠️ <strong>Servidor indisponível!</strong><br>Clique no botão abaixo para baixar o HTML manualmente.';
         messageElement.style.backgroundColor = '#fff3cd';
         messageElement.style.color = '#856404';
+        messageElement.style.fontWeight = 'bold';
     } else {
         messageElement.textContent = '✅ Post salvo com sucesso no servidor!';
         messageElement.style.backgroundColor = '#d4edda';
