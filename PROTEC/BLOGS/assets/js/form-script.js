@@ -146,6 +146,63 @@ function clearFormData() {
     }
 }
 
+// Preenche formulário com dados fictícios para teste
+function fillTestData() {
+    const testData = {
+        h1Title: 'Marble vs Granite: Complete Guide for Worcester Homes',
+        slug: 'marble-or-granite-guide-for-your-home-in-worcester',
+        metaDescription: 'Discover the pros and cons of marble and granite countertops. Expert comparison guide for Worcester homeowners making the right choice.',
+        category: 'Granite Countertops',
+        author: 'Protec Team',
+        datePublished: new Date().toISOString().split('T')[0],
+        coverImage: 'https://images.unsplash.com/photo-1556911220-bff31c812dba?w=800',
+        coverImageAlt: 'Beautiful granite countertop installation in modern kitchen',
+        introduction: 'Choosing between marble and granite countertops is one of the most important decisions for your Worcester home renovation. Both materials offer unique benefits and aesthetic appeal, but understanding their differences is crucial for making the right choice.',
+        contentBody: '<h2>Understanding Marble Countertops</h2><p>Marble is a classic choice known for its elegant veining and timeless beauty. It\'s perfect for homeowners who want a sophisticated look in their kitchen or bathroom.</p><h3>Advantages of Marble</h3><ul><li>Unique veining patterns</li><li>Cool surface temperature</li><li>Increases home value</li></ul><h2>Why Choose Granite</h2><p>Granite is incredibly durable and comes in hundreds of color options. It\'s the perfect choice for busy Worcester families who need a practical yet beautiful solution.</p><h3>Benefits of Granite</h3><ul><li>Extremely durable</li><li>Heat resistant</li><li>Low maintenance</li><li>Variety of colors</li></ul>',
+        conclusion: 'Both marble and granite are excellent choices for Worcester homes. The decision ultimately depends on your lifestyle, budget, and aesthetic preferences. Contact Protec Premium Granite today for a free consultation and let our experts help you make the perfect choice for your home.',
+        tags: 'granite countertops, marble countertops, kitchen renovation, Worcester MA, countertop installation',
+        ctaTitle: 'Ready to Transform Your Kitchen?',
+        ctaText: 'Get a free consultation and quote from Worcester\'s trusted countertop experts. We bring our mobile showroom to your home!',
+        ctaButtonText: 'Schedule Free Consultation',
+        ctaLink: 'https://www.protecpremiumgranite.com/contact'
+    };
+    
+    // Preenche os campos
+    Object.keys(testData).forEach(key => {
+        const field = document.getElementById(key);
+        if (field) {
+            field.value = testData[key];
+            // Dispara evento para atualizar contadores de caracteres
+            field.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+    });
+    
+    // Preenche imagem interna (primeira)
+    const internalImageUrl = document.querySelector('[name="internalImageUrl[]"]');
+    const internalImageAlt = document.querySelector('[name="internalImageAlt[]"]');
+    if (internalImageUrl) {
+        internalImageUrl.value = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?w=800';
+        internalImageUrl.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    if (internalImageAlt) {
+        internalImageAlt.value = 'Professional granite installation process in Worcester home';
+        internalImageAlt.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    
+    // Feedback visual
+    const statusDiv = document.getElementById('autoSaveStatus');
+    if (statusDiv) {
+        statusDiv.textContent = '🧪 Dados de teste preenchidos';
+        statusDiv.style.opacity = '1';
+        statusDiv.style.color = '#28a745';
+        setTimeout(() => {
+            statusDiv.style.opacity = '0';
+        }, 3000);
+    }
+    
+    console.log('✅ Formulário preenchido com dados de teste');
+}
+
 // ======================
 // UTILITY FUNCTIONS
 // ======================
@@ -329,6 +386,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const clearBtn = document.getElementById('clearForm');
     if (clearBtn) {
         clearBtn.addEventListener('click', clearFormData);
+    }
+    
+    // Botão de preencher dados de teste
+    const fillTestBtn = document.getElementById('fillTestData');
+    if (fillTestBtn) {
+        fillTestBtn.addEventListener('click', fillTestData);
     }
     
     // Salva antes de sair da página
