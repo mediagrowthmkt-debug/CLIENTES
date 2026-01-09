@@ -3,6 +3,150 @@
 // Data: 2026
 
 // ======================
+// AUTO-SAVE SYSTEM
+// ======================
+
+const AUTO_SAVE_KEY = 'protec_blog_form_data';
+let autoSaveTimeout = null;
+
+// Salva os dados do formulário no LocalStorage
+function saveFormToLocalStorage() {
+    const formData = {};
+    const form = document.getElementById('blogForm');
+    
+    // Salva todos os inputs e textareas
+    form.querySelectorAll('input, textarea, select').forEach(field => {
+        if (field.type === 'button' || field.type === 'submit') return;
+        
+        if (field.type === 'checkbox') {
+            formData[field.id || field.name] = field.checked;
+        } else if (field.name && field.name.includes('[]')) {
+            // Campos múltiplos (arrays)
+            if (!formData[field.name]) formData[field.name] = [];
+            formData[field.name].push(field.value);
+        } else {
+            formData[field.id || field.name] = field.value;
+        }
+    });
+    
+    localStorage.setItem(AUTO_SAVE_KEY, JSON.stringify(formData));
+    updateAutoSaveStatus();
+}
+
+// Carrega os dados salvos do LocalStorage
+function loadFormFromLocalStorage() {
+    const savedData = localStorage.getItem(AUTO_SAVE_KEY);
+    if (!savedData) return;
+    
+    try {
+        const formData = JSON.parse(savedData);
+        const form = document.getElementById('blogForm');
+        
+        // Restaura valores de campos simples
+        Object.keys(formData).forEach(key => {
+            // Pula campos array por enquanto
+            if (key.includes('[]')) return;
+            
+            const field = form.querySelector(`#${key}`) || form.querySelector(`[name="${key}"]`);
+            
+            if (field) {
+                if (field.type === 'checkbox') {
+                    field.checked = formData[key];
+                } else {
+                    field.value = formData[key];
+                }
+            }
+        });
+        
+        // Restaura campos múltiplos (arrays) - usando método diferente
+        Object.keys(formData).forEach(key => {
+            if (key.includes('[]') && Array.isArray(formData[key])) {
+                // Busca todos os campos com esse name usando getAttribute
+                const allFields = Array.from(form.querySelectorAll('input')).filter(
+                    input => input.getAttribute('name') === key
+                );
+                
+                formData[key].forEach((value, index) => {
+                    if (allFields[index]) {
+                        allFields[index].value = value;
+                    } else {
+                        // Se não existe campo suficiente, cria novos
+                        if (key === 'internalImageUrl[]' && index > 0) {
+                            document.getElementById('addInternalImage').click();
+                            setTimeout(() => {
+                                const newFields = Array.from(form.querySelectorAll('input')).filter(
+                                    input => input.getAttribute('name') === key
+                                );
+                                if (newFields[index]) newFields[index].value = value;
+                            }, 100);
+                        }
+                    }
+                });
+            }
+        });
+        
+        console.log('✅ Dados carregados do auto-save');
+        updateAutoSaveStatus('Dados restaurados');
+    } catch (error) {
+        console.error('❌ Erro ao carregar dados salvos:', error);
+    }
+}
+
+// Auto-save com debounce (aguarda 2 segundos sem digitação)
+function scheduleAutoSave() {
+    if (autoSaveTimeout) {
+        clearTimeout(autoSaveTimeout);
+    }
+    
+    autoSaveTimeout = setTimeout(() => {
+        saveFormToLocalStorage();
+    }, 2000); // 2 segundos
+}
+
+// Atualiza o status visual do auto-save
+function updateAutoSaveStatus(customMessage = null) {
+    const statusDiv = document.getElementById('autoSaveStatus');
+    if (!statusDiv) return;
+    
+    const now = new Date();
+    const timeString = now.toLocaleTimeString('pt-BR', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+    });
+    
+    statusDiv.textContent = customMessage || `💾 Salvo às ${timeString}`;
+    statusDiv.style.opacity = '1';
+    
+    // Fade out após 3 segundos
+    setTimeout(() => {
+        statusDiv.style.opacity = '0.5';
+    }, 3000);
+}
+
+// Limpa o formulário e o LocalStorage
+function clearFormData() {
+    if (confirm('⚠️ Tem certeza que deseja limpar TODOS os campos? Esta ação não pode ser desfeita.')) {
+        // Limpa o formulário
+        document.getElementById('blogForm').reset();
+        
+        // Limpa o LocalStorage
+        localStorage.removeItem(AUTO_SAVE_KEY);
+        
+        // Feedback visual
+        const statusDiv = document.getElementById('autoSaveStatus');
+        if (statusDiv) {
+            statusDiv.textContent = '🗑️ Campos limpos';
+            statusDiv.style.opacity = '1';
+            setTimeout(() => {
+                statusDiv.style.opacity = '0';
+            }, 2000);
+        }
+        
+        console.log('🗑️ Formulário e cache limpos');
+    }
+}
+
+// ======================
 // UTILITY FUNCTIONS
 // ======================
 
@@ -129,11 +273,13 @@ function convertGoogleDriveUrl(url) {
     
     // Se encontrou o ID, converte para URL direta
     if (fileId) {
-        return `https://drive.google.com/uc?export=view&id=${fileId}`;
+        const convertedUrl = `https://drive.google.com/uc?export=view&id=${fileId}`;
+        console.log('✅ Google Drive URL convertida:', url, '->', convertedUrl);
+        return convertedUrl;
     }
     
     // Se não encontrou nenhum padrão, retorna a URL original
-    console.warn('Não foi possível extrair o ID do arquivo do Google Drive:', url);
+    console.warn('⚠️ Não foi possível extrair o ID do arquivo do Google Drive:', url);
     return url;
 }
 
@@ -163,6 +309,38 @@ document.addEventListener('DOMContentLoaded', function() {
     const h1TitleInput = document.getElementById('h1Title');
     const slugInput = document.getElementById('slug');
     const primaryKeywordInput = document.getElementById('primaryKeyword');
+    
+    // ======================
+    // AUTO-SAVE SETUP
+    // ======================
+    
+    // Carrega dados salvos ao carregar a página
+    loadFormFromLocalStorage();
+    
+    // Auto-save em todos os campos do formulário
+    form.querySelectorAll('input, textarea, select').forEach(field => {
+        if (field.type !== 'button' && field.type !== 'submit') {
+            field.addEventListener('input', scheduleAutoSave);
+            field.addEventListener('change', scheduleAutoSave);
+        }
+    });
+    
+    // Botão de limpar campos
+    const clearBtn = document.getElementById('clearForm');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', clearFormData);
+    }
+    
+    // Salva antes de sair da página
+    window.addEventListener('beforeunload', function() {
+        saveFormToLocalStorage();
+    });
+    
+    console.log('✅ Sistema de auto-save ativado');
+    
+    // ======================
+    // FORM BEHAVIORS
+    // ======================
     
     // Auto-gera slug quando o título muda
     h1TitleInput.addEventListener('input', function() {
@@ -345,6 +523,11 @@ function insertTag(textarea, tag) {
 
 function showPreview() {
     const formData = collectFormData();
+    
+    // Debug: mostra quantas imagens internas foram coletadas
+    console.log('📸 Imagens Internas no Preview:', formData.internalImages);
+    console.log('🔗 URLs convertidas:', formData.internalImages.map(img => img.url));
+    
     const previewHtml = generatePreviewHtml(formData);
     
     const previewContent = document.getElementById('previewContent');
@@ -355,6 +538,19 @@ function showPreview() {
 }
 
 function generatePreviewHtml(data) {
+    // Gera HTML das imagens internas
+    const internalImagesHtml = data.internalImages && data.internalImages.length > 0 
+        ? `<div class="internal-images" style="margin: 30px 0;">
+            <h3 style="margin-bottom: 20px;">📸 Imagens Internas:</h3>
+            ${data.internalImages.map(img => `
+                <figure style="margin: 20px 0;">
+                    <img src="${img.url}" alt="${img.alt}" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                    ${img.alt ? `<figcaption style="margin-top: 8px; font-size: 14px; color: #666; font-style: italic;">${img.alt}</figcaption>` : ''}
+                </figure>
+            `).join('')}
+           </div>`
+        : '';
+    
     return `
         <div class="preview-post">
             <header>
@@ -372,6 +568,7 @@ function generatePreviewHtml(data) {
             <div class="content">
                 <div class="intro">${data.introduction}</div>
                 ${data.contentBody}
+                ${internalImagesHtml}
                 <div class="conclusion">${data.conclusion}</div>
             </div>
             
@@ -392,6 +589,10 @@ function generatePreviewHtml(data) {
 // FORM SUBMIT
 // ======================
 
+// Variável global para armazenar o último HTML gerado
+let lastGeneratedHtml = null;
+let lastGeneratedSlug = null;
+
 async function handleFormSubmit(e) {
     e.preventDefault();
     
@@ -402,21 +603,117 @@ async function handleFormSubmit(e) {
         // Coleta dados do formulário
         const formData = collectFormData();
         
+        console.log('📦 Dados coletados:', formData);
+        console.log('🖼️ Imagens internas:', formData.internalImages);
+        
         // Gera HTML do post
         const postHtml = await generatePostHtml(formData);
         
-        // "Salva" o post (simula download)
-        downloadPost(postHtml, formData.slug);
+        console.log('📄 HTML gerado, tamanho:', postHtml.length, 'caracteres');
         
-        // Mostra sucesso
-        showSuccess(formData.slug);
+        // Salva HTML globalmente para permitir download posterior
+        lastGeneratedHtml = postHtml;
+        lastGeneratedSlug = formData.slug;
+        
+        // Salva o post no servidor via PHP (com fallback automático)
+        const result = await savePostToServer(postHtml, formData.slug);
+        
+        // Mostra sucesso (mesmo que tenha sido download)
+        showSuccess(formData.slug, result);
         
     } catch (error) {
-        console.error('Erro ao gerar post:', error);
-        alert('Erro ao gerar o post. Verifique o console para mais detalhes.');
+        console.error('❌ Erro ao gerar post:', error);
+        alert('Erro ao gerar o post: ' + error.message);
     } finally {
         hideLoading();
     }
+}
+
+async function savePostToServer(html, slug) {
+    try {
+        console.log('💾 Salvando post no servidor...', slug);
+        
+        // Tenta método 1: POST com FormData (padrão)
+        console.log('📤 Tentativa 1: POST com FormData');
+        const formData = new FormData();
+        formData.append('html', html);
+        formData.append('slug', slug);
+        
+        const response = await fetch('save-post.php', {
+            method: 'POST',
+            body: formData
+        });
+        
+        console.log('📡 Status da resposta:', response.status);
+        console.log('📋 Content-Type:', response.headers.get('content-type'));
+        
+        // Se for 405 ou qualquer erro 4xx/5xx, vai direto para download
+        if (response.status === 405 || response.status >= 400) {
+            console.warn(`⚠️ Servidor retornou ${response.status}. Usando download...`);
+            return savePostAsDownload(html, slug);
+        }
+        
+        // Pega o texto da resposta primeiro
+        const responseText = await response.text();
+        console.log('📄 Resposta do servidor (primeiros 200 chars):', responseText.substring(0, 200));
+        
+        // Tenta parsear como JSON
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (jsonError) {
+            console.error('❌ Resposta não é JSON válido:', responseText.substring(0, 500));
+            console.warn('⚠️ Fallback para download devido a resposta inválida');
+            return savePostAsDownload(html, slug);
+        }
+        
+        if (!response.ok) {
+            console.warn('⚠️ Response não OK, fazendo download');
+            return savePostAsDownload(html, slug);
+        }
+        
+        console.log('✅ Post salvo com sucesso no servidor:', result);
+        
+        return result;
+    } catch (error) {
+        console.error('❌ Erro ao salvar post:', error);
+        
+        // Fallback: salvar como download - SEMPRE funciona
+        console.warn('⚠️ Fallback: Salvando como download devido a erro');
+        return savePostAsDownload(html, slug);
+    }
+}
+
+function savePostAsDownload(html, slug) {
+    console.log('💾 Salvando post como download: ' + slug + '.html');
+    console.log('📏 Tamanho do HTML para download:', html.length, 'caracteres');
+    console.log('📄 Primeiros 200 chars:', html.substring(0, 200));
+    
+    if (!html || html.trim().length === 0) {
+        console.error('❌ HTML vazio! Não pode baixar.');
+        throw new Error('HTML está vazio, não pode fazer download');
+    }
+    
+    const blob = new Blob([html], { type: 'text/html; charset=utf-8' });
+    console.log('📦 Blob criado, tamanho:', blob.size, 'bytes');
+    
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = slug + '.html';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    console.log('✅ Download iniciado com sucesso');
+    
+    return {
+        success: true,
+        method: 'download',
+        filename: slug + '.html',
+        message: 'Post salvo como download. Você pode copiar para a pasta /posts no servidor.'
+    };
 }
 
 function collectFormData() {
@@ -444,14 +741,36 @@ function collectFormData() {
     const internalImages = [];
     const internalImageUrls = formData.getAll('internalImageUrl[]');
     const internalImageAlts = formData.getAll('internalImageAlt[]');
+    
+    console.log('🔍 Debug - URLs coletadas:', internalImageUrls);
+    console.log('🔍 Debug - Alts coletados:', internalImageAlts);
+    
     for (let i = 0; i < internalImageUrls.length; i++) {
-        if (internalImageUrls[i]) {
+        const rawUrl = internalImageUrls[i];
+        const url = rawUrl ? rawUrl.trim() : '';
+        
+        console.log(`🔍 Imagem ${i+1}:`, {
+            rawUrl: rawUrl,
+            rawUrlType: typeof rawUrl,
+            rawUrlValue: JSON.stringify(rawUrl),
+            trimmedUrl: url,
+            length: url.length,
+            isEmpty: !url || url.length === 0
+        });
+        
+        if (url && url.length > 0) {
+            const convertedUrl = convertGoogleDriveUrl(url);
             internalImages.push({
-                url: convertGoogleDriveUrl(internalImageUrls[i]), // Converte Google Drive
+                url: convertedUrl,
                 alt: internalImageAlts[i] || ''
             });
+            console.log(`✅ Imagem ${i+1} adicionada:`, convertedUrl);
+        } else {
+            console.log(`⚠️ Imagem ${i+1} ignorada (vazia ou inválida)`);
         }
     }
+    
+    console.log('📦 Total de imagens internas processadas:', internalImages.length);
     
     const internalLinks = [];
     const internalLinkUrls = formData.getAll('internalLinkUrl[]');
@@ -553,25 +872,36 @@ function collectFormData() {
 }
 
 async function generatePostHtml(data) {
-    // Carrega o template
-    const response = await fetch('templates/post-template.html');
-    let template = await response.text();
+    console.log('📥 Carregando template...');
     
-    // Sanitiza URLs para prevenir JavaScript injection
-    const sanitizeUrl = (url) => {
-        if (!url) return '';
-        const urlStr = String(url).trim();
-        // Remove javascript:, data:, vbscript:, and other dangerous protocols
-        const dangerousProtocols = /^(\s*)(javascript|data|vbscript|file|about):/i;
-        if (dangerousProtocols.test(urlStr)) {
-            return '';
+    try {
+        // Carrega o template
+        const response = await fetch('templates/post-template.html');
+        
+        console.log('📡 Status do fetch template:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`Erro ao carregar template: ${response.status} ${response.statusText}`);
         }
-        // Only allow http, https, mailto, and relative URLs
-        if (!/^(https?:\/\/|mailto:|\/|#)/i.test(urlStr)) {
-            return '';
-        }
-        return urlStr;
-    };
+        
+        let template = await response.text();
+        console.log('✅ Template carregado, tamanho:', template.length, 'caracteres');
+        
+        // Sanitiza URLs para prevenir JavaScript injection
+        const sanitizeUrl = (url) => {
+            if (!url) return '';
+            const urlStr = String(url).trim();
+            // Remove javascript:, data:, vbscript:, and other dangerous protocols
+            const dangerousProtocols = /^(\s*)(javascript|data|vbscript|file|about):/i;
+            if (dangerousProtocols.test(urlStr)) {
+                return '';
+            }
+            // Only allow http, https, mailto, and relative URLs
+            if (!/^(https?:\/\/|mailto:|\/|#)/i.test(urlStr)) {
+                return '';
+            }
+            return urlStr;
+        };
     
     // Substitui placeholders com sanitização
     template = template.replace(/{{META_TITLE}}/g, escapeHtml(data.metaTitle));
@@ -625,6 +955,11 @@ async function generatePostHtml(data) {
     template = template.replace(/{{RELATED_POSTS_HTML}}/g, '<!-- Posts relacionados serão adicionados automaticamente -->');
     
     return template;
+    
+    } catch (error) {
+        console.error('❌ Erro ao gerar HTML do template:', error);
+        throw error;
+    }
 }
 
 function downloadPost(html, slug) {
@@ -672,10 +1007,78 @@ function setupModals() {
     });
 }
 
-function showSuccess(slug) {
+function showSuccess(slug, result) {
     const modal = document.getElementById('successModal');
     const pathElement = document.getElementById('postPath');
-    pathElement.textContent = `posts/${slug}.html`;
+    
+    // Verifica se foi salvo no servidor ou como download
+    const postPath = `posts/${slug}.html`;
+    pathElement.textContent = postPath;
+    
+    // Mostra mensagem adicional baseada no método usado
+    const messageElement = document.querySelector('.success-message') || document.createElement('p');
+    if (!document.querySelector('.success-message')) {
+        messageElement.className = 'success-message';
+        messageElement.style.marginTop = '10px';
+        messageElement.style.fontSize = '0.9em';
+        messageElement.style.color = '#666';
+        messageElement.style.padding = '10px';
+        messageElement.style.backgroundColor = '#f0f0f0';
+        messageElement.style.borderRadius = '5px';
+        modal.querySelector('.modal-content').appendChild(messageElement);
+    }
+    
+    if (result && result.method === 'download') {
+        messageElement.innerHTML = '📥 <strong>Post baixado!</strong><br>Upload o arquivo para a pasta <code>/posts/</code> no servidor.';
+        messageElement.style.backgroundColor = '#fff3cd';
+        messageElement.style.color = '#856404';
+    } else {
+        messageElement.textContent = '✅ Post salvo com sucesso no servidor!';
+        messageElement.style.backgroundColor = '#d4edda';
+        messageElement.style.color = '#155724';
+    }
+    
+    // Adiciona ou atualiza botão de download do HTML
+    let downloadBtn = document.getElementById('downloadHtmlBtn');
+    if (!downloadBtn) {
+        downloadBtn = document.createElement('button');
+        downloadBtn.id = 'downloadHtmlBtn';
+        downloadBtn.className = 'btn-secondary';
+        downloadBtn.style.marginTop = '15px';
+        downloadBtn.style.padding = '10px 20px';
+        downloadBtn.style.backgroundColor = '#007bff';
+        downloadBtn.style.color = 'white';
+        downloadBtn.style.border = 'none';
+        downloadBtn.style.borderRadius = '5px';
+        downloadBtn.style.cursor = 'pointer';
+        downloadBtn.style.fontSize = '14px';
+        downloadBtn.innerHTML = '📥 Baixar HTML Completo';
+        
+        downloadBtn.onclick = function() {
+            if (lastGeneratedHtml && lastGeneratedSlug) {
+                console.log('📥 Iniciando download manual do HTML...');
+                console.log('📏 Tamanho:', lastGeneratedHtml.length, 'caracteres');
+                
+                const blob = new Blob([lastGeneratedHtml], { type: 'text/html; charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = lastGeneratedSlug + '.html';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+                
+                console.log('✅ Download concluído!');
+                alert('✅ Download iniciado! Verifique sua pasta de downloads.');
+            } else {
+                alert('❌ Erro: HTML não disponível. Gere o post novamente.');
+            }
+        };
+        
+        modal.querySelector('.modal-content').appendChild(downloadBtn);
+    }
+    
     modal.style.display = 'flex';
 }
 
